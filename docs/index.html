@@ -108,6 +108,10 @@
       <div id="previewFrame" class="preview-frame">
         <canvas id="previewCanvas"></canvas>
         <div id="emptyPreview" class="empty-preview">Apri una foto JPG 360</div>
+        <div id="loadingPreview" class="loading-preview hidden" aria-live="polite">
+          <div class="loader"></div>
+          <strong>Caricamento foto in corso...</strong>
+        </div>
         <button class="nav-arrow left" data-nudge="yaw:-5" type="button">‹</button>
         <button class="nav-arrow right" data-nudge="yaw:5" type="button">›</button>
         <button class="nav-arrow up" data-nudge="pitch:2" type="button">⌃</button>
@@ -193,9 +197,10 @@
     <form method="dialog"><button class="dialog-close" value="close" aria-label="Chiudi">×</button></form>
     <h2>Aiuto - Orienta360 Online</h2>
     <p><strong>Apri Foto</strong> carica una JPG panoramica dal tuo PC. La foto resta nel browser e non viene caricata su un server.</p>
+    <p><strong>Apri Cartella</strong> chiede al browser il permesso di leggere le JPG della cartella scelta: le immagini restano sul PC dell'utente e non vengono inviate a GitHub.</p>
     <p><strong>Cambia Vista</strong> regola Yaw, Pitch, Roll e zoom dell'anteprima. Trascina l'anteprima nella direzione in cui vuoi guardare.</p>
     <p><strong>Salva Come</strong> produce una nuova JPG 360 orientata e inserisce i metadata GPano per il riconoscimento come panoramica.</p>
-    <p><strong>Privacy</strong> permette maschere ovali per volti, rettangolari per targhe, maschera fotografo e copertura Nadir con mosaico o logo.</p>
+    <p><strong>Privacy</strong> permette maschere ovali per volti, rettangolari per targhe, maschera fotografo e copertura Nadir con mosaico o logo. Se non hai usato <strong>Fissa questa vista</strong>, il salvataggio privacy mantiene l'orientamento originale della foto.</p>
     <p>Versione online senza video: per video e lavorazioni pesanti resta disponibile l'app locale.</p>
   </dialog>
 

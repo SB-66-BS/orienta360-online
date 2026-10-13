@@ -8,6 +8,7 @@ const refs = {
   previewCanvas: $("#previewCanvas"),
   previewFrame: $("#previewFrame"),
   emptyPreview: $("#emptyPreview"),
+  loadingPreview: $("#loadingPreview"),
   yawSlider: $("#yawSlider"),
   pitchSlider: $("#pitchSlider"),
   rollSlider: $("#rollSlider"),
@@ -25,7 +26,19 @@ const refs = {
   helpDialog: $("#helpDialog"),
   previewTip: $("#previewTip"),
   logoName: $("#logoName"),
+  privacyRow: $(".privacy-row"),
 };
+
+const privacyRowHome = document.createComment("privacy-row-home");
+refs.privacyRow.before(privacyRowHome);
+if (!refs.loadingPreview) {
+  refs.loadingPreview = document.createElement("div");
+  refs.loadingPreview.id = "loadingPreview";
+  refs.loadingPreview.className = "loading-preview hidden";
+  refs.loadingPreview.setAttribute("aria-live", "polite");
+  refs.loadingPreview.innerHTML = '<div class="loader"></div><strong>Caricamento foto in corso...</strong>';
+  refs.previewFrame.appendChild(refs.loadingPreview);
+}
 
 const sourceCanvas = document.createElement("canvas");
 const sourceCtx = sourceCanvas.getContext("2d", { willReadFrequently: true });
@@ -46,7 +59,12 @@ const state = {
   activeTool: "",
   renderToken: 0,
   saving: false,
+  loading: false,
   lastOutputName: "",
+  viewFixed: false,
+  fixedYaw: 0,
+  fixedPitch: 0,
+  fixedRoll: 0,
   nadir: {
     effect: "mosaic",
     size: 26,
@@ -307,13 +325,15 @@ function updateLabels() {
 
 function updateControls() {
   const hasPhoto = Boolean(state.sourceData);
-  $("#saveOrientedButton").disabled = !hasPhoto || state.saving;
-  $("#savePrivacyButton").disabled = !hasPhoto || state.saving || state.masks.length === 0;
-  $("#savePrivacyButtonTop").disabled = !hasPhoto || state.saving || state.masks.length === 0;
-  $("#resetPrivacyButton").disabled = !hasPhoto || state.saving || state.masks.length === 0;
-  $("#previousButton").disabled = state.folderFiles.length <= 1 || state.folderIndex <= 0;
-  $("#nextButton").disabled = state.folderFiles.length <= 1 || state.folderIndex >= state.folderFiles.length - 1;
-  refs.emptyPreview.classList.toggle("hidden", hasPhoto);
+  const busy = state.saving || state.loading;
+  $("#saveOrientedButton").disabled = !hasPhoto || busy;
+  $("#savePrivacyButton").disabled = !hasPhoto || busy || state.masks.length === 0;
+  $("#savePrivacyButtonTop").disabled = !hasPhoto || busy || state.masks.length === 0;
+  $("#resetPrivacyButton").disabled = !hasPhoto || busy || state.masks.length === 0;
+  $("#previousButton").disabled = busy || state.folderFiles.length <= 1 || state.folderIndex <= 0;
+  $("#nextButton").disabled = busy || state.folderFiles.length <= 1 || state.folderIndex >= state.folderFiles.length - 1;
+  refs.emptyPreview.classList.toggle("hidden", hasPhoto || state.loading);
+  refs.loadingPreview.classList.toggle("hidden", !state.loading);
   refs.privacyStatus.textContent = hasPhoto
     ? (state.masks.length ? `${state.masks.length} mascheramenti pronti.` : "Verifica foto corrente.")
     : "Verifica foto corrente.";
@@ -338,11 +358,12 @@ async function loadPhoto(file, folderContext = null) {
   if (!file) {
     return;
   }
-  setBusy(true, "Caricamento foto...");
+  setLoading(true, "Caricamento foto in corso...");
   try {
+    await nextFrame();
     const bitmap = await createImageBitmap(file, { imageOrientation: "none" });
     if (!probable360(file, bitmap)) {
-      setBusy(false);
+      setLoading(false);
       alert("La foto selezionata non sembra una panoramica 360. Disattiva il filtro se vuoi aprirla comunque.");
       bitmap.close?.();
       return;
@@ -361,6 +382,10 @@ async function loadPhoto(file, folderContext = null) {
     state.masks = [];
     state.activeTool = "";
     state.lastOutputName = "";
+    state.viewFixed = false;
+    state.fixedYaw = 0;
+    state.fixedPitch = 0;
+    state.fixedRoll = 0;
     if (folderContext) {
       state.folderFiles = folderContext.files;
       state.folderIndex = folderContext.index;
@@ -374,8 +399,19 @@ async function loadPhoto(file, folderContext = null) {
     console.error(error);
     alert(`Impossibile aprire la foto: ${error.message}`);
   } finally {
-    setBusy(false);
+    setLoading(false);
+    renderPerspective();
   }
+}
+
+function nextFrame() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+function setLoading(value, label = "Caricamento foto in corso...") {
+  state.loading = value;
+  refs.loadingPreview.querySelector("strong").textContent = label;
+  updateControls();
 }
 
 function setBusy(value, label = "Salvataggio in corso") {
@@ -392,16 +428,46 @@ function setProgress(value) {
   refs.progressBar.style.width = `${Math.round(clamp(value, 0, 1) * 100)}%`;
 }
 
+function currentOrientation() {
+  return { yaw: state.yaw, pitch: state.pitch, roll: state.roll };
+}
+
+function fixedOrientation() {
+  return { yaw: state.fixedYaw, pitch: state.fixedPitch, roll: state.fixedRoll };
+}
+
+function orientationForSave(includeMasks) {
+  if (state.viewFixed) {
+    return fixedOrientation();
+  }
+  return includeMasks ? { yaw: 0, pitch: 0, roll: 0 } : currentOrientation();
+}
+
 function resetView(render = true) {
   state.yaw = 0;
   state.pitch = 0;
   state.roll = 0;
   state.fov = 80;
+  state.viewFixed = false;
+  state.fixedYaw = 0;
+  state.fixedPitch = 0;
+  state.fixedRoll = 0;
   refs.fixedText.textContent = "Vista non fissata";
   updateLabels();
   if (render) {
     renderPerspective();
   }
+}
+
+function syncFullscreenPrivacy() {
+  const fullscreen = document.fullscreenElement === refs.previewFrame;
+  refs.previewFrame.classList.toggle("fullscreen-active", fullscreen);
+  if (fullscreen) {
+    refs.previewFrame.appendChild(refs.privacyRow);
+  } else {
+    privacyRowHome.after(refs.privacyRow);
+  }
+  renderPerspective();
 }
 
 function setSliderValue(name, value) {
@@ -550,7 +616,7 @@ function onPointerUp(event) {
   dragState = null;
 }
 
-async function renderEquirectangular(includeMasks) {
+async function renderEquirectangular(includeMasks, orientation = currentOrientation()) {
   const width = state.sourceWidth;
   const height = state.sourceHeight;
   const canvas = document.createElement("canvas");
@@ -573,7 +639,7 @@ async function renderEquirectangular(includeMasks) {
         sinLat,
         cosLat * Math.cos(lonRad),
       ];
-      const [srcLon, srcLat] = lonLatFromVector(rotateVector(vector, state.yaw, state.pitch, state.roll));
+      const [srcLon, srcLat] = lonLatFromVector(rotateVector(vector, orientation.yaw, orientation.pitch, orientation.roll));
       const color = sampleColor(srcLon, srcLat, includeMasks);
       out[index++] = color[0];
       out[index++] = color[1];
@@ -695,7 +761,7 @@ async function saveImage(includeMasks) {
   }
   setBusy(true, includeMasks ? "Salvataggio privacy in corso" : "Salvataggio in corso");
   try {
-    const canvas = await renderEquirectangular(includeMasks);
+    const canvas = await renderEquirectangular(includeMasks, orientationForSave(includeMasks));
     const jpeg = await canvasToJpegBlob(canvas);
     const withXmp = await injectXmp(jpeg, canvas.width, canvas.height);
     const filename = outputName(includeMasks);
@@ -818,6 +884,10 @@ function bindEvents() {
   });
 
   $("#fixViewButton").addEventListener("click", () => {
+    state.viewFixed = true;
+    state.fixedYaw = state.yaw;
+    state.fixedPitch = state.pitch;
+    state.fixedRoll = state.roll;
     refs.fixedText.textContent = `Vista fissata: Yaw ${state.yaw.toFixed(2)}°, Pitch ${state.pitch.toFixed(2)}°, Roll ${state.roll.toFixed(2)}°`;
   });
   $("#resetViewButton").addEventListener("click", () => resetView());
@@ -838,6 +908,7 @@ function bindEvents() {
   $("#helpButton").addEventListener("click", () => refs.helpDialog.showModal());
   $("#settingsButton").addEventListener("click", () => alert("Nella versione online non serve configurare visualizzatori esterni: apri, ritocca e scarica dal browser."));
   $("#fullscreenButton").addEventListener("click", () => refs.previewFrame.requestFullscreen?.());
+  document.addEventListener("fullscreenchange", syncFullscreenPrivacy);
   $("#previewHelp").addEventListener("click", () => refs.previewTip.classList.toggle("hidden"));
 
   refs.previewCanvas.addEventListener("pointerdown", onPointerDown);
