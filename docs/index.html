@@ -33,19 +33,23 @@
         <h2 class="card-title blue">Seleziona Foto</h2>
         <p class="card-subtitle">Seleziona una foto a 360° o una cartella</p>
         <div class="select-layout">
-          <div>
+          <div class="single-column">
             <h3>Foto singola</h3>
             <button id="openPhotoButton" class="action-button blue filled" type="button">APRI FOTO</button>
+            <button id="openVideoButton" class="action-button video filled" type="button">APRI VIDEO<br><span>(sperimentale)</span></button>
           </div>
-          <div>
+          <div class="folder-column">
             <h3>Cartella</h3>
             <button id="openFolderButton" class="action-button blue filled" type="button">APRI CARTELLA</button>
-          </div>
-          <div class="folder-controls">
-            <button id="previousButton" class="action-button ghost" type="button" disabled>PRECEDENTE</button>
-            <button id="nextButton" class="action-button ghost" type="button" disabled>SUCCESSIVA</button>
-            <button id="refreshFolderButton" class="action-button ghost" type="button" disabled>AGGIORNA</button>
             <label class="check-row"><input id="filter360" type="checkbox" checked> <span>Mostra solo probabili foto 360</span></label>
+            <label class="check-row video-filter"><input id="filterVideo360" type="checkbox" checked> <span>Mostra solo probabili video 360</span></label>
+          </div>
+          <div class="folder-controls previous-controls">
+            <button id="previousButton" class="action-button blue ghost" type="button" disabled>PRECEDENTE</button>
+          </div>
+          <div class="folder-controls next-controls">
+            <button id="nextButton" class="action-button blue ghost" type="button" disabled>SUCCESSIVA</button>
+            <button id="refreshFolderButton" class="action-button blue ghost" type="button" disabled>AGGIORNA</button>
           </div>
         </div>
       </article>
@@ -137,7 +141,7 @@
 
     <section class="viewer-row">
       <button id="setViewerButton" class="action-button blue outline" type="button">Imposta FSPViewer</button>
-      <button id="openViewerButton" class="action-button ghost" type="button" disabled>Apri in FSPViewer</button>
+      <button id="openViewerButton" class="action-button blue outline" type="button" disabled>Apri in FSPViewer</button>
     </section>
 
     <section class="privacy-row">
@@ -213,6 +217,7 @@
     <p><strong>Apri Cartella</strong> chiede al browser il permesso di leggere solo immagini JPG, JPEG o PNG dalla cartella scelta: le immagini restano sul PC dell'utente e non vengono inviate a GitHub.</p>
     <p>La spunta <strong>Mostra solo probabili foto 360</strong> è utile quando nella cartella sono presenti sia foto normali sia foto 360°.</p>
     <p><strong>Aggiorna</strong> è utile se aggiungi nuove immagini nella cartella da Esplora risorse mentre la cartella è già aperta nell'app.</p>
+    <p><strong>Video</strong> è predisposto nell'interfaccia per allinearsi alla versione locale, ma la lavorazione video online resta in preparazione.</p>
 
     <h3>2. Cambia Vista</h3>
     <p>Usa i controlli di zoom solo per analizzare meglio l'anteprima durante il lavoro: il livello di zoom non è un parametro che possa essere fisicamente salvato in una nuova foto 360.</p>
@@ -252,6 +257,30 @@
     </div>
   </dialog>
 
+  <dialog id="privacyHelpDialog" class="help-dialog privacy-help-dialog">
+    <form method="dialog"><button class="dialog-close" value="close" aria-label="Chiudi">×</button></form>
+    <h2>Istruzioni mascheramento Privacy</h2>
+    <p><strong>Maschera Nadir</strong> si applica in automatico sul polo basso dell'immagine.</p>
+    <p><strong>Maschera fotografo</strong> è un ovale che in prossimità dei poli diventa una maschera polare. Può essere abbinata alla Maschera Nadir per coprire una maggiore superficie.</p>
+    <p><strong>REGOLA</strong> permette di usare sul Nadir il mosaico oppure un logo con opacità, sfumatura, rotazione, forma e spostamento regolabili.</p>
+    <p><strong>Click</strong> sull'anteprima = posiziona maschera.</p>
+    <p><strong>Trascinamento mouse</strong> = sposta la vista per cercare e cliccare nuovi volti/targhe/fotografo.</p>
+    <p><strong>Shift+trascinamento</strong> = spostamento rapido della vista.</p>
+    <p><strong>Ctrl+Z</strong> continua ad annullare l'ultima maschera.</p>
+    <p>In modalità <strong>Volti</strong> o <strong>Targhe</strong>, il click aggiunge maschere ovali o rettangolari nei punti cliccati.</p>
+    <p>In modalità <strong>Fotografo</strong>, il click posiziona e sposta la maschera fotografo; <strong>Ctrl+click</strong> aggiunge maschere fotografo adiacenti o distanziate; <strong>Ctrl+trascinamento</strong> estende i pixel strisciando la maschera.</p>
+  </dialog>
+
+  <dialog id="overwriteDialog" class="confirm-dialog">
+    <form method="dialog"><button class="dialog-close" value="cancel" aria-label="Chiudi">×</button></form>
+    <h2>Sovrascrivere l'originale?</h2>
+    <p>Premendo Sì verrà anche creato un file di backup dell'originale.</p>
+    <div class="confirm-actions">
+      <button id="confirmOverwriteButton" class="action-button blue outline" type="button">Sì</button>
+      <button id="cancelOverwriteButton" class="action-button blue outline" type="button">No</button>
+    </div>
+  </dialog>
+
   <dialog id="settingsDialog" class="settings-dialog">
     <form method="dialog"><button class="dialog-close" value="close" aria-label="Chiudi">×</button></form>
     <h2>Impostazioni</h2>
@@ -266,6 +295,7 @@
       <p>Nel browser la cartella va confermata dall'utente a ogni sessione per motivi di sicurezza.</p>
       <label class="check-row"><input id="rememberWindowSetting" type="checkbox" checked disabled> <span>Ricorda dimensione/posizione finestra</span></label>
       <p>La versione online segue dimensione e posizione della finestra del browser.</p>
+      <button id="resetWindowButton" class="action-button blue outline" type="button">RIPRISTINA FINESTRA</button>
     </section>
 
     <section class="settings-panel" data-settings-panel="saving">
@@ -273,22 +303,45 @@
       <input id="orientedSuffix" type="text" value="_ORIENTATA">
       <label>Suffisso file privacy</label>
       <input id="maskedSuffix" type="text" value="_MASCHERATO">
-      <label>Qualità JPEG</label>
-      <input id="jpegQuality" type="range" min="85" max="100" value="98" step="1">
+      <label>Qualità JPG/JPEG</label>
+      <div class="range-with-value">
+        <input id="jpegQuality" type="range" min="85" max="100" value="98" step="1">
+        <output id="jpegQualityValue">98</output>
+      </div>
       <p>Quando disponibile, il browser apre una finestra di salvataggio. In caso contrario salva nella cartella Download.</p>
     </section>
 
     <section class="settings-panel" data-settings-panel="viewer">
-      <label>Visualizzatore consigliato</label>
-      <input id="viewerPath" type="text" value="C:\Program Files\FSPViewer\FSPViewer.exe">
-      <p>La web-app non può avviare direttamente programmi locali o leggere percorsi eseguibili. Il percorso resta come riferimento per aprire manualmente il JPG salvato con FSPViewer.</p>
-      <div class="dialog-actions">
-        <button id="openFspDownloadButton" class="action-button blue outline" type="button">Pagina FSPViewer</button>
+      <h3>Foto - percorso FSPViewer</h3>
+      <div class="viewer-setting-row">
+        <input id="viewerPath" type="text" value="C:\Program Files\FSPViewer\FSPViewer64.exe">
+        <button id="browseFspButton" class="action-button green outline" type="button">SFOGLIA...</button>
       </div>
+      <div class="viewer-helper-row">
+        <button id="detectFspButton" class="action-button green outline" type="button">RILEVA FSPVIEWER</button>
+        <span>Per aprire le foto salvate.</span>
+      </div>
+
+      <hr>
+
+      <h3>Video - percorso VLC Media Player</h3>
+      <div class="viewer-setting-row">
+        <input id="vlcPath" type="text" value="C:\Program Files\VideoLAN\VLC\vlc.exe">
+        <button id="browseVlcButton" class="action-button video outline" type="button">SFOGLIA...</button>
+      </div>
+      <div class="viewer-helper-row">
+        <button id="detectVlcButton" class="action-button video outline" type="button">RILEVA VLC</button>
+        <span>Per aprire i video salvati.</span>
+      </div>
+
+      <label class="check-row auto-open-row"><input id="autoOpenResult" type="checkbox"> <span>Apri automaticamente il risultato dopo il salvataggio</span></label>
+      <p>Nota online: il browser non può avviare direttamente programmi locali; questi percorsi servono come promemoria operativo per la versione locale e per l'apertura manuale dei file salvati.</p>
     </section>
 
     <div class="dialog-actions settings-actions">
       <button id="resetSettingsButton" class="action-button blue outline" type="button">RIPRISTINA PREDEFINITI</button>
+      <span></span>
+      <button id="cancelSettingsButton" class="action-button blue outline" type="button">ANNULLA</button>
       <button id="closeSettingsButton" class="action-button green filled" type="button">SALVA</button>
     </div>
   </dialog>

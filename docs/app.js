@@ -27,7 +27,9 @@ const refs = {
   privacyProgressBar: $("#privacyProgressBar"),
   privacyDialog: $("#privacyDialog"),
   helpDialog: $("#helpDialog"),
+  privacyHelpDialog: $("#privacyHelpDialog"),
   folderDialog: $("#folderDialog"),
+  overwriteDialog: $("#overwriteDialog"),
   settingsDialog: $("#settingsDialog"),
   previewTip: $("#previewTip"),
   logoName: $("#logoName"),
@@ -631,6 +633,7 @@ function syncSettingsDialog() {
   $("#orientedSuffix").value = state.settings.orientedSuffix;
   $("#maskedSuffix").value = state.settings.maskedSuffix;
   $("#jpegQuality").value = Math.round(state.settings.jpegQuality * 100);
+  $("#jpegQualityValue").textContent = $("#jpegQuality").value;
 }
 
 function applySettingsFromDialog() {
@@ -653,6 +656,10 @@ function openSettings(tab = "general") {
   syncSettingsDialog();
   selectSettingsTab(tab);
   refs.settingsDialog.showModal();
+}
+
+function showLocalProgramNotice(programName) {
+  alert(`Nella versione online il browser non può cercare o avviare direttamente ${programName} sul PC. Il percorso resta come promemoria per lavorare in modo coerente con l'app locale.`);
 }
 
 function currentOrientation() {
@@ -889,23 +896,31 @@ async function renderEquirectangular(includeMasks, orientation = currentOrientat
 
 function drawNadirHint(ctx, width, height) {
   const x = width / 2;
-  const y = height * 0.74;
-  const size = Math.max(56, width * 0.032);
+  const y = height * 0.68;
+  const size = Math.max(70, width * 0.038);
+  const shaftWidth = size * 0.22;
+  const shaftHeight = size * 0.72;
+  const headHeight = size * 0.40;
+  const textSize = Math.max(26, size * 0.26);
   ctx.save();
   ctx.translate(x, y);
-  ctx.lineWidth = Math.max(6, size * 0.12);
-  ctx.strokeStyle = "#0f766e";
-  ctx.fillStyle = "#48e06f";
+  ctx.shadowColor = "rgba(0,0,0,0.45)";
+  ctx.shadowBlur = size * 0.08;
+  ctx.shadowOffsetY = size * 0.03;
+  ctx.fillStyle = "rgba(255,255,255,0.94)";
   ctx.beginPath();
-  ctx.moveTo(-size * 0.7, -size * 0.2);
-  ctx.lineTo(0, size * 0.55);
-  ctx.lineTo(size * 0.7, -size * 0.2);
-  ctx.lineTo(size * 0.45, -size * 0.45);
-  ctx.lineTo(0, size * 0.05);
-  ctx.lineTo(-size * 0.45, -size * 0.45);
+  ctx.rect(-shaftWidth / 2, -shaftHeight, shaftWidth, shaftHeight);
+  ctx.moveTo(-size * 0.48, -headHeight * 0.08);
+  ctx.lineTo(0, headHeight * 0.92);
+  ctx.lineTo(size * 0.48, -headHeight * 0.08);
   ctx.closePath();
   ctx.fill();
-  ctx.stroke();
+  ctx.font = `700 ${textSize}px "Segoe UI", Arial, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillText("Scorri", 0, headHeight * 1.05);
+  ctx.fillText("in basso", 0, headHeight * 1.05 + textSize * 1.05);
+  ctx.closePath();
   ctx.restore();
 }
 
@@ -1040,52 +1055,140 @@ async function ensureWritePermission(fileHandle) {
   return await fileHandle.requestPermission(options) === "granted";
 }
 
-async function saveBlobAs(blob, suggestedName) {
-  if (window.showSaveFilePicker) {
-    const fileHandle = await window.showSaveFilePicker(savePickerOptions(suggestedName));
-    await writeBlobToHandle(fileHandle, blob);
-    return fileHandle.name || suggestedName;
+async function pickSaveFile(suggestedName) {
+  if (!window.showSaveFilePicker) {
+    return null;
   }
-  downloadBlob(blob, suggestedName);
-  return suggestedName;
+  return window.showSaveFilePicker(savePickerOptions(suggestedName));
 }
 
-async function overwriteOriginal(blob) {
-  if (!state.fileHandle) {
+function askOverwriteConfirmation() {
+  return new Promise((resolve) => {
+    const confirmButton = $("#confirmOverwriteButton");
+    const cancelButton = $("#cancelOverwriteButton");
+    let done = false;
+    const cleanup = (value) => {
+      if (done) {
+        return;
+      }
+      done = true;
+      confirmButton.removeEventListener("click", onConfirm);
+      cancelButton.removeEventListener("click", onCancel);
+      refs.overwriteDialog.removeEventListener("close", onClose);
+      resolve(value);
+    };
+    const onConfirm = () => {
+      refs.overwriteDialog.close("confirm");
+      cleanup(true);
+    };
+    const onCancel = () => {
+      refs.overwriteDialog.close("cancel");
+      cleanup(false);
+    };
+    const onClose = () => cleanup(refs.overwriteDialog.returnValue === "confirm");
+    confirmButton.addEventListener("click", onConfirm);
+    cancelButton.addEventListener("click", onCancel);
+    refs.overwriteDialog.addEventListener("close", onClose);
+    refs.overwriteDialog.showModal();
+  });
+}
+
+async function prepareSaveTarget(includeMasks, mode, filename) {
+  if (mode === "overwrite" && !includeMasks) {
+    if (!await askOverwriteConfirmation()) {
+      return { kind: "cancel" };
+    }
+    if (state.fileHandle) {
+      return { kind: "overwrite" };
+    }
     alert("Il browser non ha un permesso di scrittura sul file originale. Uso Salva come.");
-    return saveBlobAs(blob, outputName(false));
   }
-  if (!confirm("Sovrascrivere il file originale? In caso di dubbio usa Salva come.")) {
+
+  if (mode === "copyNext" && !includeMasks) {
+    const directoryHandle = state.file?.parentDirectoryHandle || state.folderHandle;
+    if (directoryHandle?.getFileHandle) {
+      return { kind: "folderCopy", directoryHandle };
+    }
+  }
+
+  const fileHandle = await pickSaveFile(filename);
+  return fileHandle ? { kind: "handle", fileHandle } : { kind: "download" };
+}
+
+async function rememberSavedFileInFolder(fileHandle, parentDirectoryHandle = null) {
+  if (!fileHandle || !state.folderFiles.length) {
+    return;
+  }
+  const file = rememberFileHandle(await fileHandle.getFile(), fileHandle, parentDirectoryHandle);
+  rememberRelativePath(file, file.name);
+  const key = folderSortKey(file);
+  const existingIndex = state.folderFiles.findIndex((item) => folderSortKey(item) === key);
+  if (existingIndex >= 0) {
+    state.folderFiles[existingIndex] = file;
+  } else {
+    state.folderFiles.push(file);
+  }
+  state.folderFiles = sortFolderFiles(state.folderFiles);
+  state.folderIndex = state.folderFiles.findIndex((item) => folderSortKey(item) === folderSortKey(state.file));
+}
+
+async function writePreparedSave(target, blob, filename) {
+  if (target.kind === "cancel") {
     return "";
   }
-  if (!await ensureWritePermission(state.fileHandle)) {
-    alert("Permesso di scrittura negato. Uso Salva come.");
-    return saveBlobAs(blob, outputName(false));
+  if (target.kind === "overwrite") {
+    if (!await ensureWritePermission(state.fileHandle)) {
+      throw new Error("Permesso di scrittura negato.");
+    }
+    await backupOriginalIfPossible();
+    await writeBlobToHandle(state.fileHandle, blob);
+    return state.file?.name || filename;
   }
-  await backupOriginalIfPossible();
-  await writeBlobToHandle(state.fileHandle, blob);
-  return state.file?.name || "foto360.jpg";
-}
-
-async function saveCopyInCurrentFolder(blob, filename) {
-  const directoryHandle = state.file?.parentDirectoryHandle || state.folderHandle;
-  if (directoryHandle?.getFileHandle) {
-    const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
+  if (target.kind === "folderCopy") {
+    const fileHandle = await target.directoryHandle.getFileHandle(filename, { create: true });
     await writeBlobToHandle(fileHandle, blob);
+    await rememberSavedFileInFolder(fileHandle, target.directoryHandle);
     return filename;
   }
-  return saveBlobAs(blob, filename);
+  if (target.kind === "handle") {
+    await writeBlobToHandle(target.fileHandle, blob);
+    await rememberSavedFileInFolder(target.fileHandle);
+    return target.fileHandle.name || filename;
+  }
+  downloadBlob(blob, filename);
+  return filename;
 }
 
-function loadFolderIndex(index) {
+async function loadFolderIndex(index) {
   if (index < 0 || index >= state.folderFiles.length) {
     return;
   }
-  loadPhoto(state.folderFiles[index], { files: state.folderFiles, index });
+  let file = state.folderFiles[index];
+  if (file.fileHandle) {
+    const freshFile = rememberFileHandle(await file.fileHandle.getFile(), file.fileHandle, file.parentDirectoryHandle || null);
+    rememberRelativePath(freshFile, folderSortKey(file));
+    state.folderFiles[index] = freshFile;
+    file = freshFile;
+  }
+  await loadPhoto(file, { files: state.folderFiles, index });
 }
 
 async function saveImage(includeMasks, mode = "saveAs") {
   if (!state.sourceData || state.saving) {
+    return;
+  }
+  const filename = outputName(includeMasks);
+  let target;
+  try {
+    target = await prepareSaveTarget(includeMasks, mode, filename);
+    if (target.kind === "cancel") {
+      return;
+    }
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      console.error(error);
+      alert(`Errore durante la scelta del file: ${error.message}`);
+    }
     return;
   }
   setBusy(true, includeMasks ? "Salvataggio privacy in corso" : "Salvataggio in corso", includeMasks ? "privacy" : "view");
@@ -1093,15 +1196,7 @@ async function saveImage(includeMasks, mode = "saveAs") {
     const canvas = await renderEquirectangular(includeMasks, orientationForSave(includeMasks));
     const jpeg = await canvasToJpegBlob(canvas);
     const withXmp = await injectXmp(jpeg, canvas.width, canvas.height);
-    const filename = outputName(includeMasks);
-    let savedName = filename;
-    if (mode === "overwrite" && !includeMasks) {
-      savedName = await overwriteOriginal(withXmp);
-    } else if (mode === "copyNext" && !includeMasks) {
-      savedName = await saveCopyInCurrentFolder(withXmp, filename);
-    } else {
-      savedName = await saveBlobAs(withXmp, filename);
-    }
+    const savedName = await writePreparedSave(target, withXmp, filename);
     if (!savedName) {
       return;
     }
@@ -1183,6 +1278,9 @@ function resetNadirParams() {
 
 function bindEvents() {
   $("#openPhotoButton").addEventListener("click", openSinglePhotoSelection);
+  $("#openVideoButton").addEventListener("click", () => {
+    alert("La sezione video online è in preparazione. Per ora i video restano nella versione locale sperimentale.");
+  });
   $("#openFolderButton").addEventListener("click", () => {
     if (refs.folderDialog?.showModal) {
       refs.folderDialog.showModal();
@@ -1257,7 +1355,7 @@ function bindEvents() {
     button.addEventListener("click", () => setActiveTool(button.dataset.tool));
   });
   $("#privacyTuneButton").addEventListener("click", () => refs.privacyDialog.showModal());
-  $("#privacyHelpButton").addEventListener("click", () => refs.helpDialog.showModal());
+  $("#privacyHelpButton").addEventListener("click", () => refs.privacyHelpDialog.showModal());
   $("#helpButton").addEventListener("click", () => refs.helpDialog.showModal());
   $("#settingsButton").addEventListener("click", () => openSettings());
   $("#setViewerButton").addEventListener("click", () => openSettings("viewer"));
@@ -1275,6 +1373,10 @@ function bindEvents() {
     applySettingsFromDialog();
     refs.settingsDialog.close();
   });
+  $("#cancelSettingsButton").addEventListener("click", () => refs.settingsDialog.close());
+  $("#jpegQuality").addEventListener("input", (event) => {
+    $("#jpegQualityValue").textContent = event.target.value;
+  });
   $("#resetSettingsButton").addEventListener("click", () => {
     state.settings.orientedSuffix = "_ORIENTATA";
     state.settings.maskedSuffix = "_MASCHERATO";
@@ -1282,9 +1384,11 @@ function bindEvents() {
     syncSettingsDialog();
     saveSettings();
   });
-  $("#openFspDownloadButton").addEventListener("click", () => {
-    window.open("https://www.fsoft.it/FSPViewer/download/", "_blank", "noopener");
-  });
+  $("#resetWindowButton").addEventListener("click", () => alert("Nella versione online dimensione e posizione dipendono dalla finestra del browser."));
+  $("#browseFspButton").addEventListener("click", () => showLocalProgramNotice("FSPViewer"));
+  $("#detectFspButton").addEventListener("click", () => showLocalProgramNotice("FSPViewer"));
+  $("#browseVlcButton").addEventListener("click", () => showLocalProgramNotice("VLC Media Player"));
+  $("#detectVlcButton").addEventListener("click", () => showLocalProgramNotice("VLC Media Player"));
   $("#fullscreenButton").addEventListener("click", () => refs.previewFrame.requestFullscreen?.());
   refs.fullscreenCloseButton.addEventListener("click", () => document.exitFullscreen?.());
   document.addEventListener("fullscreenchange", syncFullscreenPrivacy);
