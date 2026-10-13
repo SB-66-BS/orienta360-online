@@ -46,32 +46,33 @@ button:disabled {
 .app-shell {
   min-width: 1280px;
   min-height: 100vh;
-  padding: 18px 24px 12px;
+  padding: 20px 24px 12px;
 }
 
 .app-header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  height: 74px;
+  gap: 24px;
+  height: 112px;
+  padding-bottom: 24px;
 }
 
 .app-logo {
-  width: 44px;
-  height: 44px;
-  transform: translateY(-8px);
+  width: 62px;
+  height: 62px;
+  transform: translateY(-14px);
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 29px;
+  font-size: 40px;
   line-height: 1;
   font-weight: 700;
 }
 
 .app-header > span {
   color: var(--muted);
-  font-size: 16px;
+  font-size: 22px;
   margin-right: auto;
 }
 
@@ -131,18 +132,18 @@ button:disabled {
 
 .card-icon {
   position: absolute;
-  top: -16px;
-  left: 14px;
-  width: 48px;
-  height: 48px;
+  top: -13px;
+  left: 18px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: grid;
   place-items: center;
 }
 
 .card-icon img {
-  width: 21px;
-  height: 21px;
+  width: 24px;
+  height: 24px;
 }
 
 .card-icon.blue,
@@ -154,13 +155,13 @@ button:disabled {
 
 .card-title {
   position: absolute;
-  top: -16px;
-  left: 86px;
+  top: -11px;
+  left: 72px;
   margin: 0;
   padding: 3px 11px 5px;
   color: white;
   border-radius: 2px;
-  font-size: 21px;
+  font-size: 22px;
   line-height: 1;
   font-weight: 700;
 }
@@ -168,7 +169,7 @@ button:disabled {
 .card-subtitle {
   position: absolute;
   top: 30px;
-  left: 86px;
+  left: 72px;
   right: 18px;
   margin: 0;
   color: var(--muted);
