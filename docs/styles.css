@@ -57,8 +57,9 @@ button:disabled {
 }
 
 .app-logo {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
+  transform: translateY(-8px);
 }
 
 .app-header h1 {
@@ -130,18 +131,18 @@ button:disabled {
 
 .card-icon {
   position: absolute;
-  top: -20px;
-  left: 12px;
-  width: 58px;
-  height: 58px;
+  top: -16px;
+  left: 14px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   display: grid;
   place-items: center;
 }
 
 .card-icon img {
-  width: 25px;
-  height: 25px;
+  width: 21px;
+  height: 21px;
 }
 
 .card-icon.blue,
@@ -154,7 +155,7 @@ button:disabled {
 .card-title {
   position: absolute;
   top: -16px;
-  left: 92px;
+  left: 86px;
   margin: 0;
   padding: 3px 11px 5px;
   color: white;
@@ -167,7 +168,7 @@ button:disabled {
 .card-subtitle {
   position: absolute;
   top: 30px;
-  left: 92px;
+  left: 86px;
   right: 18px;
   margin: 0;
   color: var(--muted);
