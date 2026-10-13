@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orienta360 Online</title>
+  <link rel="icon" href="assets/icons/app-logo.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <input id="photoInput" class="visually-hidden" type="file" accept="image/jpeg,image/jpg">
+  <input id="folderInput" class="visually-hidden" type="file" accept="image/jpeg,image/jpg" multiple webkitdirectory>
+  <input id="logoInput" class="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/bmp">
+
+  <main class="app-shell">
+    <header class="app-header">
+      <img src="assets/icons/app-logo.svg" alt="" class="app-logo">
+      <h1>Orienta360</h1>
+      <span>Orienta e ritocca Foto360</span>
+      <button id="settingsButton" class="header-button" type="button" title="Impostazioni">
+        <img src="assets/icons/gear.svg" alt="">
+        <span>Impostazioni</span>
+      </button>
+      <button id="helpButton" class="header-button" type="button" title="Aiuto">
+        <img src="assets/icons/help.svg" alt="">
+        <span>Aiuto</span>
+      </button>
+    </header>
+
+    <section class="top-grid">
+      <article class="card select-card">
+        <div class="card-icon blue"><img src="assets/icons/photo.svg" alt=""></div>
+        <h2 class="card-title blue">Seleziona Foto</h2>
+        <p class="card-subtitle">Seleziona una foto a 360° o una cartella</p>
+        <div class="select-layout">
+          <div>
+            <h3>Foto singola</h3>
+            <button id="openPhotoButton" class="action-button blue filled" type="button">APRI FOTO</button>
+          </div>
+          <div>
+            <h3>Cartella</h3>
+            <button id="openFolderButton" class="action-button blue filled" type="button">APRI CARTELLA</button>
+          </div>
+          <div class="folder-controls">
+            <button id="previousButton" class="action-button ghost" type="button" disabled>PRECEDENTE</button>
+            <button id="nextButton" class="action-button ghost" type="button" disabled>SUCCESSIVA</button>
+            <label class="check-row"><input id="filter360" type="checkbox" checked> <span>Mostra solo probabili foto 360</span></label>
+          </div>
+        </div>
+      </article>
+
+      <article class="card view-card">
+        <div class="card-icon teal"><img src="assets/icons/target.svg" alt=""></div>
+        <h2 class="card-title teal">Cambia Vista</h2>
+        <p class="card-subtitle">Cambia la vista della foto aperta</p>
+        <p class="view-hint">Trascina l'anteprima oppure usa gli slider; poi fissa la vista</p>
+        <div class="slider-row">
+          <span>Sposta orizzontale</span>
+          <button class="step-button" data-step="yaw:-2" type="button">−</button>
+          <input id="yawSlider" type="range" min="-180" max="180" value="0" step="1">
+          <button class="step-button" data-step="yaw:2" type="button">+</button>
+          <output id="yawValue">0.0°</output>
+        </div>
+        <div class="slider-row">
+          <span>Sposta verticale</span>
+          <button class="step-button" data-step="pitch:-0.5" type="button">−</button>
+          <input id="pitchSlider" type="range" min="-89.5" max="89.5" value="0" step="0.5">
+          <button class="step-button" data-step="pitch:0.5" type="button">+</button>
+          <output id="pitchValue">0.0°</output>
+        </div>
+        <div class="slider-row">
+          <span>Livella orizzonte</span>
+          <button class="step-button" data-step="roll:-0.5" type="button">−</button>
+          <input id="rollSlider" type="range" min="-45" max="45" value="0" step="0.5">
+          <button class="step-button" data-step="roll:0.5" type="button">+</button>
+          <output id="rollValue">0.0°</output>
+        </div>
+        <div class="button-row">
+          <button id="fixViewButton" class="action-button teal filled" type="button">FISSA QUESTA VISTA</button>
+          <button id="resetViewButton" class="action-button teal outline" type="button">RESET ORIENTAMENTO</button>
+        </div>
+      </article>
+
+      <article class="card save-card">
+        <div class="card-icon green"><img src="assets/icons/save.svg" alt=""></div>
+        <h2 class="card-title green">Salvataggio</h2>
+        <p class="card-subtitle">Salva la foto con il nuovo orientamento</p>
+        <label class="check-row nadir-arrow"><input id="nadirHint" type="checkbox"> <span>Freccia «scorri in basso» al centro della vista frontale</span></label>
+        <div class="button-row save-buttons">
+          <button id="saveOrientedButton" class="action-button green filled" type="button" disabled>SALVA<br>COME</button>
+          <button id="savePrivacyButtonTop" class="action-button orange filled" type="button" disabled>SALVA<br>PRIVACY</button>
+        </div>
+        <div id="saveProgress" class="save-progress hidden">
+          <strong>Salvataggio in corso</strong>
+          <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="preview-panel">
+      <div class="preview-header">
+        <img src="assets/icons/photo-outline.svg" alt="">
+        <h2>Anteprima 360°</h2>
+        <button id="fullscreenButton" class="icon-button" type="button" title="Anteprima grande">
+          <img src="assets/icons/fullscreen.svg" alt="">
+        </button>
+      </div>
+      <div id="previewFrame" class="preview-frame">
+        <canvas id="previewCanvas"></canvas>
+        <div id="emptyPreview" class="empty-preview">Apri una foto JPG 360</div>
+        <div id="loadingPreview" class="loading-preview hidden" aria-live="polite">
+          <div class="loader"></div>
+          <strong>Caricamento foto in corso...</strong>
+        </div>
+        <button class="nav-arrow left" data-nudge="yaw:-5" type="button">‹</button>
+        <button class="nav-arrow right" data-nudge="yaw:5" type="button">›</button>
+        <button class="nav-arrow up" data-nudge="pitch:2" type="button">⌃</button>
+        <button class="nav-arrow down" data-nudge="pitch:-2" type="button">⌄</button>
+        <button id="previewHelp" class="preview-help" type="button">?</button>
+        <div id="previewTip" class="preview-tip hidden">Trascina nella direzione in cui vuoi guardare. Shift+trascinamento accelera.</div>
+        <div class="zoom-bar">
+          <span>−</span>
+          <input id="fovSlider" type="range" min="25" max="120" value="80" step="1">
+          <span>+</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="status-row">
+      <span id="fileInfo">Nessuna foto caricata</span>
+      <span id="viewInfo">Yaw 0.00° · Pitch 0.00° · Roll 0.00° · FOV 80.00°</span>
+      <strong id="fixedText">Vista non fissata</strong>
+    </section>
+
+    <section class="privacy-row">
+      <span>Privacy:</span>
+      <button id="privacyHelpButton" class="small-icon-button" type="button" title="Istruzioni privacy"><img src="assets/icons/help.svg" alt=""></button>
+      <button class="privacy-button" data-tool="faces" type="button">Maschera volti</button>
+      <button class="privacy-button" data-tool="plates" type="button">Maschera targhe</button>
+      <button class="privacy-button" data-tool="photographer" type="button">Maschera fotografo</button>
+      <button class="privacy-button" data-tool="nadir" type="button">Maschera Nadir</button>
+      <button id="privacyTuneButton" class="privacy-button outline" type="button">REGOLA</button>
+      <button id="resetPrivacyButton" class="privacy-button outline" type="button" disabled>RESET</button>
+      <button id="savePrivacyButton" class="privacy-button filled" type="button" disabled>SALVA PRIVACY</button>
+      <span id="privacyStatus">Verifica foto corrente.</span>
+    </section>
+  </main>
+
+  <dialog id="privacyDialog" class="floating-dialog">
+    <form method="dialog">
+      <button class="dialog-close" value="close" aria-label="Chiudi">×</button>
+    </form>
+    <h2>Regola mascheramenti Privacy</h2>
+    <div class="form-grid">
+      <label>Tipo Nadir</label>
+      <div class="segmented">
+        <button id="nadirMosaicButton" type="button">MOSAICO</button>
+        <button id="nadirLogoButton" type="button">LOGO</button>
+      </div>
+
+      <label>Logo</label>
+      <div class="inline-field">
+        <button id="chooseLogoButton" class="action-button orange outline" type="button">SCEGLI FILE</button>
+        <span id="logoName">Nessun logo</span>
+      </div>
+
+      <label>Dimensione Nadir</label>
+      <input id="nadirSize" type="range" min="14" max="42" value="26" step="1">
+
+      <label class="mosaic-only">Grana mosaico</label>
+      <input id="mosaicScale" class="mosaic-only" type="range" min="0.7" max="2.2" value="1" step="0.1">
+
+      <label class="logo-only">Opacità logo</label>
+      <input id="logoOpacity" class="logo-only" type="range" min="5" max="100" value="78" step="1">
+
+      <label class="logo-only">Sfumatura bordo</label>
+      <input id="logoFeather" class="logo-only" type="range" min="0" max="80" value="22" step="1">
+
+      <label class="logo-only">Ovalizzazione</label>
+      <input id="logoOval" class="logo-only" type="range" min="-60" max="60" value="0" step="1">
+
+      <label class="logo-only">Ruota logo</label>
+      <input id="logoRotation" class="logo-only" type="range" min="0" max="360" value="0" step="1">
+
+      <label class="logo-only">Sposta X</label>
+      <input id="logoOffsetX" class="logo-only" type="range" min="-55" max="55" value="0" step="1">
+
+      <label class="logo-only">Sposta Y</label>
+      <input id="logoOffsetY" class="logo-only" type="range" min="-55" max="55" value="0" step="1">
+    </div>
+    <div class="dialog-actions">
+      <button id="resetNadirButton" class="action-button orange outline" type="button">RESET PARAMETRI</button>
+    </div>
+  </dialog>
+
+  <dialog id="helpDialog" class="help-dialog">
+    <form method="dialog"><button class="dialog-close" value="close" aria-label="Chiudi">×</button></form>
+    <h2>Aiuto - Orienta360 Online</h2>
+    <p><strong>Apri Foto</strong> carica una JPG panoramica dal tuo PC. La foto resta nel browser e non viene caricata su un server.</p>
+    <p><strong>Apri Cartella</strong> chiede al browser il permesso di leggere le JPG della cartella scelta: le immagini restano sul PC dell'utente e non vengono inviate a GitHub.</p>
+    <p><strong>Cambia Vista</strong> regola Yaw, Pitch, Roll e zoom dell'anteprima. Trascina l'anteprima nella direzione in cui vuoi guardare.</p>
+    <p><strong>Salva Come</strong> produce una nuova JPG 360 orientata e inserisce i metadata GPano per il riconoscimento come panoramica.</p>
+    <p><strong>Privacy</strong> permette maschere ovali per volti, rettangolari per targhe, maschera fotografo e copertura Nadir con mosaico o logo. Se non hai usato <strong>Fissa questa vista</strong>, il salvataggio privacy mantiene l'orientamento originale della foto.</p>
+    <p>Versione online senza video: per video e lavorazioni pesanti resta disponibile l'app locale.</p>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
