@@ -9,6 +9,7 @@ const refs = {
   previewFrame: $("#previewFrame"),
   emptyPreview: $("#emptyPreview"),
   loadingPreview: $("#loadingPreview"),
+  fullscreenCloseButton: $("#fullscreenCloseButton"),
   yawSlider: $("#yawSlider"),
   pitchSlider: $("#pitchSlider"),
   rollSlider: $("#rollSlider"),
@@ -22,8 +23,11 @@ const refs = {
   privacyStatus: $("#privacyStatus"),
   saveProgress: $("#saveProgress"),
   progressBar: $("#progressBar"),
+  privacyProgress: $("#privacyProgress"),
+  privacyProgressBar: $("#privacyProgressBar"),
   privacyDialog: $("#privacyDialog"),
   helpDialog: $("#helpDialog"),
+  folderDialog: $("#folderDialog"),
   previewTip: $("#previewTip"),
   logoName: $("#logoName"),
   privacyRow: $(".privacy-row"),
@@ -38,6 +42,25 @@ if (!refs.loadingPreview) {
   refs.loadingPreview.setAttribute("aria-live", "polite");
   refs.loadingPreview.innerHTML = '<div class="loader"></div><strong>Caricamento foto in corso...</strong>';
   refs.previewFrame.appendChild(refs.loadingPreview);
+}
+if (!refs.fullscreenCloseButton) {
+  refs.fullscreenCloseButton = document.createElement("button");
+  refs.fullscreenCloseButton.id = "fullscreenCloseButton";
+  refs.fullscreenCloseButton.className = "fullscreen-close hidden";
+  refs.fullscreenCloseButton.type = "button";
+  refs.fullscreenCloseButton.title = "Torna all'anteprima piccola";
+  refs.fullscreenCloseButton.setAttribute("aria-label", "Torna all'anteprima piccola");
+  refs.fullscreenCloseButton.textContent = "×";
+  refs.previewFrame.appendChild(refs.fullscreenCloseButton);
+}
+if (!refs.privacyProgress) {
+  refs.privacyProgress = document.createElement("div");
+  refs.privacyProgress.id = "privacyProgress";
+  refs.privacyProgress.className = "privacy-progress hidden";
+  refs.privacyProgress.setAttribute("aria-live", "polite");
+  refs.privacyProgress.innerHTML = '<strong>Salvataggio privacy in corso</strong><div class="privacy-progress-track"><div id="privacyProgressBar" class="privacy-progress-bar"></div></div>';
+  refs.privacyRow.insertBefore(refs.privacyProgress, refs.privacyStatus);
+  refs.privacyProgressBar = $("#privacyProgressBar");
 }
 
 const sourceCanvas = document.createElement("canvas");
@@ -59,6 +82,7 @@ const state = {
   activeTool: "",
   renderToken: 0,
   saving: false,
+  savingMode: "",
   loading: false,
   lastOutputName: "",
   viewFixed: false,
@@ -82,6 +106,7 @@ const state = {
   },
 };
 
+const supportedFolderImagePattern = /\.(jpe?g|png)$/i;
 const degToRad = Math.PI / 180;
 const radToDeg = 180 / Math.PI;
 
@@ -354,6 +379,76 @@ function probable360(file, bitmap) {
   return /360|pano|panorama|equi|sfer|sphere|vr/i.test(file.name);
 }
 
+function isSupportedFolderImage(file) {
+  return supportedFolderImagePattern.test(file.name);
+}
+
+function folderSortKey(file) {
+  return file.relativePath || file.webkitRelativePath || file.name;
+}
+
+function rememberRelativePath(file, path) {
+  try {
+    Object.defineProperty(file, "relativePath", { value: path, configurable: true });
+  } catch {
+    file.relativePath = path;
+  }
+  return file;
+}
+
+function sortFolderFiles(files) {
+  return files
+    .filter(isSupportedFolderImage)
+    .sort((a, b) => folderSortKey(a).localeCompare(folderSortKey(b), "it", { numeric: true, sensitivity: "base" }));
+}
+
+async function collectDirectoryImages(directoryHandle, prefix = "") {
+  const files = [];
+  for await (const [name, handle] of directoryHandle.entries()) {
+    const path = `${prefix}${name}`;
+    if (handle.kind === "file") {
+      if (supportedFolderImagePattern.test(name)) {
+        const file = await handle.getFile();
+        files.push(rememberRelativePath(file, path));
+      }
+    } else if (handle.kind === "directory") {
+      files.push(...await collectDirectoryImages(handle, `${path}/`));
+    }
+  }
+  return files;
+}
+
+async function loadFolderFiles(files) {
+  const sortedFiles = sortFolderFiles(files);
+  if (!sortedFiles.length) {
+    alert("Nella cartella scelta non ho trovato immagini JPG, JPEG o PNG.");
+    return;
+  }
+  await loadPhoto(sortedFiles[0], { files: sortedFiles, index: 0 });
+}
+
+async function openFolderSelection() {
+  if (window.showDirectoryPicker) {
+    try {
+      const directoryHandle = await window.showDirectoryPicker({ mode: "read" });
+      setLoading(true, "Lettura cartella in corso...");
+      const files = await collectDirectoryImages(directoryHandle);
+      await loadFolderFiles(files);
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        console.error(error);
+        alert(`Impossibile leggere la cartella: ${error.message}`);
+      }
+    } finally {
+      setLoading(false);
+      renderPerspective();
+    }
+    return;
+  }
+  refs.folderInput.value = "";
+  refs.folderInput.click();
+}
+
 async function loadPhoto(file, folderContext = null) {
   if (!file) {
     return;
@@ -414,18 +509,24 @@ function setLoading(value, label = "Caricamento foto in corso...") {
   updateControls();
 }
 
-function setBusy(value, label = "Salvataggio in corso") {
+function setBusy(value, label = "Salvataggio in corso", mode = "view") {
   state.saving = value;
-  refs.saveProgress.classList.toggle("hidden", !value);
-  refs.saveProgress.querySelector("strong").textContent = label;
+  state.savingMode = value ? mode : "";
+  const privacySave = value && mode === "privacy";
+  refs.saveProgress.classList.toggle("hidden", !value || privacySave);
+  refs.privacyProgress.classList.toggle("hidden", !privacySave);
+  const progressPanel = privacySave ? refs.privacyProgress : refs.saveProgress;
+  progressPanel.querySelector("strong").textContent = label;
   if (!value) {
     refs.progressBar.style.width = "0%";
+    refs.privacyProgressBar.style.width = "0%";
   }
   updateControls();
 }
 
 function setProgress(value) {
-  refs.progressBar.style.width = `${Math.round(clamp(value, 0, 1) * 100)}%`;
+  const bar = state.savingMode === "privacy" ? refs.privacyProgressBar : refs.progressBar;
+  bar.style.width = `${Math.round(clamp(value, 0, 1) * 100)}%`;
 }
 
 function currentOrientation() {
@@ -462,6 +563,7 @@ function resetView(render = true) {
 function syncFullscreenPrivacy() {
   const fullscreen = document.fullscreenElement === refs.previewFrame;
   refs.previewFrame.classList.toggle("fullscreen-active", fullscreen);
+  refs.fullscreenCloseButton.classList.toggle("hidden", !fullscreen);
   if (fullscreen) {
     refs.previewFrame.appendChild(refs.privacyRow);
   } else {
@@ -759,7 +861,7 @@ async function saveImage(includeMasks) {
   if (!state.sourceData || state.saving) {
     return;
   }
-  setBusy(true, includeMasks ? "Salvataggio privacy in corso" : "Salvataggio in corso");
+  setBusy(true, includeMasks ? "Salvataggio privacy in corso" : "Salvataggio in corso", includeMasks ? "privacy" : "view");
   try {
     const canvas = await renderEquirectangular(includeMasks, orientationForSave(includeMasks));
     const jpeg = await canvasToJpegBlob(canvas);
@@ -838,15 +940,21 @@ function resetNadirParams() {
 
 function bindEvents() {
   $("#openPhotoButton").addEventListener("click", () => refs.photoInput.click());
-  $("#openFolderButton").addEventListener("click", () => refs.folderInput.click());
+  $("#openFolderButton").addEventListener("click", () => {
+    if (refs.folderDialog?.showModal) {
+      refs.folderDialog.showModal();
+    } else {
+      openFolderSelection();
+    }
+  });
+  $("#cancelFolderButton")?.addEventListener("click", () => refs.folderDialog?.close());
+  $("#confirmFolderButton")?.addEventListener("click", () => {
+    refs.folderDialog?.close();
+    openFolderSelection();
+  });
   refs.photoInput.addEventListener("change", () => loadPhoto(refs.photoInput.files[0]));
   refs.folderInput.addEventListener("change", () => {
-    const files = Array.from(refs.folderInput.files || [])
-      .filter((file) => /\.jpe?g$/i.test(file.name))
-      .sort((a, b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name));
-    if (files.length) {
-      loadPhoto(files[0], { files, index: 0 });
-    }
+    loadFolderFiles(Array.from(refs.folderInput.files || []));
   });
 
   $("#previousButton").addEventListener("click", () => {
@@ -908,6 +1016,7 @@ function bindEvents() {
   $("#helpButton").addEventListener("click", () => refs.helpDialog.showModal());
   $("#settingsButton").addEventListener("click", () => alert("Nella versione online non serve configurare visualizzatori esterni: apri, ritocca e scarica dal browser."));
   $("#fullscreenButton").addEventListener("click", () => refs.previewFrame.requestFullscreen?.());
+  refs.fullscreenCloseButton.addEventListener("click", () => document.exitFullscreen?.());
   document.addEventListener("fullscreenchange", syncFullscreenPrivacy);
   $("#previewHelp").addEventListener("click", () => refs.previewTip.classList.toggle("hidden"));
 

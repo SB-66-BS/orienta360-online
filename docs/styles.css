@@ -354,6 +354,30 @@ input[type="range"] {
   transition: width 0.18s ease;
 }
 
+.privacy-progress {
+  flex: 0 0 min(520px, 100%);
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr);
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 12px;
+  white-space: normal;
+}
+
+.privacy-progress-track {
+  height: 14px;
+  overflow: hidden;
+  background: #f8dfd4;
+}
+
+.privacy-progress-bar {
+  width: 0%;
+  height: 100%;
+  background: var(--orange-active);
+  transition: width 0.18s ease;
+}
+
 .preview-panel {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -493,6 +517,26 @@ input[type="range"] {
   font-size: 12px;
 }
 
+.fullscreen-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255,255,255,0.46);
+  border-radius: 12px;
+  background: rgba(17, 27, 56, 0.72);
+  color: white;
+  font-size: 34px;
+  line-height: 1;
+  box-shadow: 0 1px 12px rgba(0,0,0,0.24);
+}
+
+.fullscreen-close:hover {
+  background: rgba(17, 27, 56, 0.90);
+}
+
 .zoom-bar {
   position: absolute;
   left: 50%;
@@ -541,6 +585,7 @@ input[type="range"] {
   justify-content: center;
   gap: 8px;
   min-height: 42px;
+  flex-wrap: wrap;
   white-space: nowrap;
 }
 
@@ -697,6 +742,18 @@ dialog::backdrop {
   display: flex;
   justify-content: flex-end;
   margin-top: 18px;
+}
+
+.folder-dialog {
+  width: min(560px, calc(100vw - 48px));
+}
+
+.folder-actions {
+  gap: 10px;
+}
+
+.folder-actions .action-button {
+  min-width: 150px;
 }
 
 .hidden,
