@@ -28,6 +28,7 @@ const refs = {
   privacyDialog: $("#privacyDialog"),
   helpDialog: $("#helpDialog"),
   folderDialog: $("#folderDialog"),
+  settingsDialog: $("#settingsDialog"),
   previewTip: $("#previewTip"),
   logoName: $("#logoName"),
   privacyRow: $(".privacy-row"),
@@ -74,6 +75,8 @@ const state = {
   sourceHeight: 0,
   folderFiles: [],
   folderIndex: -1,
+  folderHandle: null,
+  fileHandle: null,
   yaw: 0,
   pitch: 0,
   roll: 0,
@@ -85,6 +88,12 @@ const state = {
   savingMode: "",
   loading: false,
   lastOutputName: "",
+  lastSavedUrl: "",
+  settings: {
+    orientedSuffix: "_ORIENTATA",
+    maskedSuffix: "_MASCHERATO",
+    jpegQuality: 0.98,
+  },
   viewFixed: false,
   fixedYaw: 0,
   fixedPitch: 0,
@@ -352,11 +361,14 @@ function updateControls() {
   const hasPhoto = Boolean(state.sourceData);
   const busy = state.saving || state.loading;
   $("#saveOrientedButton").disabled = !hasPhoto || busy;
+  $("#overwriteButton").disabled = !hasPhoto || busy;
+  $("#saveNextButton").disabled = !hasPhoto || busy || state.folderFiles.length <= 1 || state.folderIndex >= state.folderFiles.length - 1;
   $("#savePrivacyButton").disabled = !hasPhoto || busy || state.masks.length === 0;
-  $("#savePrivacyButtonTop").disabled = !hasPhoto || busy || state.masks.length === 0;
   $("#resetPrivacyButton").disabled = !hasPhoto || busy || state.masks.length === 0;
   $("#previousButton").disabled = busy || state.folderFiles.length <= 1 || state.folderIndex <= 0;
   $("#nextButton").disabled = busy || state.folderFiles.length <= 1 || state.folderIndex >= state.folderFiles.length - 1;
+  $("#refreshFolderButton").disabled = busy || state.folderFiles.length === 0;
+  $("#openViewerButton").disabled = !state.lastSavedUrl;
   refs.emptyPreview.classList.toggle("hidden", hasPhoto || state.loading);
   refs.loadingPreview.classList.toggle("hidden", !state.loading);
   refs.privacyStatus.textContent = hasPhoto
@@ -396,6 +408,20 @@ function rememberRelativePath(file, path) {
   return file;
 }
 
+function rememberFileHandle(file, fileHandle, parentDirectoryHandle = null) {
+  if (!fileHandle) {
+    return file;
+  }
+  try {
+    Object.defineProperty(file, "fileHandle", { value: fileHandle, configurable: true });
+    Object.defineProperty(file, "parentDirectoryHandle", { value: parentDirectoryHandle, configurable: true });
+  } catch {
+    file.fileHandle = fileHandle;
+    file.parentDirectoryHandle = parentDirectoryHandle;
+  }
+  return file;
+}
+
 function sortFolderFiles(files) {
   return files
     .filter(isSupportedFolderImage)
@@ -409,7 +435,7 @@ async function collectDirectoryImages(directoryHandle, prefix = "") {
     if (handle.kind === "file") {
       if (supportedFolderImagePattern.test(name)) {
         const file = await handle.getFile();
-        files.push(rememberRelativePath(file, path));
+        files.push(rememberFileHandle(rememberRelativePath(file, path), handle, directoryHandle));
       }
     } else if (handle.kind === "directory") {
       files.push(...await collectDirectoryImages(handle, `${path}/`));
@@ -427,10 +453,36 @@ async function loadFolderFiles(files) {
   await loadPhoto(sortedFiles[0], { files: sortedFiles, index: 0 });
 }
 
+async function refreshFolder(keepCurrent = true) {
+  if (!state.folderHandle) {
+    alert("Per aggiornare la cartella online occorre riaprire la cartella: il browser non conserva l'accesso diretto in questa modalità.");
+    openFolderSelection();
+    return;
+  }
+  const currentKey = keepCurrent && state.file ? folderSortKey(state.file) : "";
+  setLoading(true, "Aggiornamento cartella in corso...");
+  try {
+    const files = sortFolderFiles(await collectDirectoryImages(state.folderHandle));
+    if (!files.length) {
+      alert("Nella cartella scelta non ho trovato immagini JPG, JPEG o PNG.");
+      state.folderFiles = [];
+      state.folderIndex = -1;
+      updateControls();
+      return;
+    }
+    const nextIndex = Math.max(0, files.findIndex((file) => folderSortKey(file) === currentKey));
+    await loadPhoto(files[nextIndex], { files, index: nextIndex });
+  } finally {
+    setLoading(false);
+    renderPerspective();
+  }
+}
+
 async function openFolderSelection() {
   if (window.showDirectoryPicker) {
     try {
-      const directoryHandle = await window.showDirectoryPicker({ mode: "read" });
+      const directoryHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+      state.folderHandle = directoryHandle;
       setLoading(true, "Lettura cartella in corso...");
       const files = await collectDirectoryImages(directoryHandle);
       await loadFolderFiles(files);
@@ -445,8 +497,35 @@ async function openFolderSelection() {
     }
     return;
   }
+  state.folderHandle = null;
   refs.folderInput.value = "";
   refs.folderInput.click();
+}
+
+async function openSinglePhotoSelection() {
+  if (window.showOpenFilePicker) {
+    try {
+      const [fileHandle] = await window.showOpenFilePicker({
+        multiple: false,
+        types: [{
+          description: "Foto 360",
+          accept: { "image/*": [".jpg", ".jpeg", ".png"] },
+        }],
+      });
+      const file = rememberFileHandle(await fileHandle.getFile(), fileHandle);
+      state.folderHandle = null;
+      await loadPhoto(file);
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        console.error(error);
+        alert(`Impossibile aprire la foto: ${error.message}`);
+      }
+    }
+    return;
+  }
+  state.folderHandle = null;
+  refs.photoInput.value = "";
+  refs.photoInput.click();
 }
 
 async function loadPhoto(file, folderContext = null) {
@@ -471,6 +550,7 @@ async function loadPhoto(file, folderContext = null) {
 
     const imageData = sourceCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
     state.file = file;
+    state.fileHandle = file.fileHandle || null;
     state.sourceData = imageData.data;
     state.sourceWidth = sourceCanvas.width;
     state.sourceHeight = sourceCanvas.height;
@@ -484,6 +564,9 @@ async function loadPhoto(file, folderContext = null) {
     if (folderContext) {
       state.folderFiles = folderContext.files;
       state.folderIndex = folderContext.index;
+    } else {
+      state.folderFiles = [];
+      state.folderIndex = -1;
     }
 
     refs.fileInfo.textContent = `${file.name} - ${state.sourceWidth}x${state.sourceHeight} - foto 360 online`;
@@ -527,6 +610,49 @@ function setBusy(value, label = "Salvataggio in corso", mode = "view") {
 function setProgress(value) {
   const bar = state.savingMode === "privacy" ? refs.privacyProgressBar : refs.progressBar;
   bar.style.width = `${Math.round(clamp(value, 0, 1) * 100)}%`;
+}
+
+function loadSettings() {
+  try {
+    const stored = JSON.parse(localStorage.getItem("orienta360-online-settings") || "{}");
+    state.settings.orientedSuffix = stored.orientedSuffix || state.settings.orientedSuffix;
+    state.settings.maskedSuffix = stored.maskedSuffix || state.settings.maskedSuffix;
+    state.settings.jpegQuality = clamp(Number(stored.jpegQuality || state.settings.jpegQuality), 0.85, 1);
+  } catch {
+    // Ignore malformed local settings.
+  }
+}
+
+function saveSettings() {
+  localStorage.setItem("orienta360-online-settings", JSON.stringify(state.settings));
+}
+
+function syncSettingsDialog() {
+  $("#orientedSuffix").value = state.settings.orientedSuffix;
+  $("#maskedSuffix").value = state.settings.maskedSuffix;
+  $("#jpegQuality").value = Math.round(state.settings.jpegQuality * 100);
+}
+
+function applySettingsFromDialog() {
+  state.settings.orientedSuffix = $("#orientedSuffix").value.trim() || "_ORIENTATA";
+  state.settings.maskedSuffix = $("#maskedSuffix").value.trim() || "_MASCHERATO";
+  state.settings.jpegQuality = clamp(Number($("#jpegQuality").value) / 100, 0.85, 1);
+  saveSettings();
+}
+
+function selectSettingsTab(name) {
+  $$(".settings-tab").forEach((button) => {
+    button.classList.toggle("active", button.dataset.settingsTab === name);
+  });
+  $$(".settings-panel").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.settingsPanel === name);
+  });
+}
+
+function openSettings(tab = "general") {
+  syncSettingsDialog();
+  selectSettingsTab(tab);
+  refs.settingsDialog.showModal();
 }
 
 function currentOrientation() {
@@ -763,8 +889,8 @@ async function renderEquirectangular(includeMasks, orientation = currentOrientat
 
 function drawNadirHint(ctx, width, height) {
   const x = width / 2;
-  const y = height * 0.915;
-  const size = Math.max(42, width * 0.025);
+  const y = height * 0.74;
+  const size = Math.max(56, width * 0.032);
   ctx.save();
   ctx.translate(x, y);
   ctx.lineWidth = Math.max(6, size * 0.12);
@@ -791,7 +917,7 @@ async function canvasToJpegBlob(canvas) {
       } else {
         reject(new Error("Creazione JPG non riuscita."));
       }
-    }, "image/jpeg", 0.98);
+    }, "image/jpeg", state.settings.jpegQuality);
   });
 }
 
@@ -843,7 +969,8 @@ async function injectXmp(blob, width, height) {
 function outputName(includeMasks) {
   const original = state.file?.name || "foto360.jpg";
   const stem = original.replace(/\.[^.]+$/, "");
-  return `${stem}${includeMasks ? "_MASCHERATO" : "_ORIENTATA"}.jpg`;
+  const suffix = includeMasks ? state.settings.maskedSuffix : state.settings.orientedSuffix;
+  return `${stem}${suffix || ""}.jpg`;
 }
 
 function downloadBlob(blob, filename) {
@@ -857,7 +984,107 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1200);
 }
 
-async function saveImage(includeMasks) {
+function rememberSavedBlob(blob, filename) {
+  if (state.lastSavedUrl) {
+    URL.revokeObjectURL(state.lastSavedUrl);
+  }
+  state.lastSavedUrl = URL.createObjectURL(blob);
+  state.lastOutputName = filename;
+}
+
+function savePickerOptions(suggestedName) {
+  const options = {
+    suggestedName,
+    types: [{
+      description: "JPEG 360",
+      accept: { "image/jpeg": [".jpg", ".jpeg"] },
+    }],
+  };
+  if (state.folderHandle) {
+    options.startIn = state.folderHandle;
+  }
+  return options;
+}
+
+async function writeBlobToHandle(fileHandle, blob) {
+  const writable = await fileHandle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+}
+
+function backupNameFor(file) {
+  const original = file?.name || "foto360.jpg";
+  const stem = original.replace(/\.[^.]+$/, "");
+  const extension = original.match(/\.[^.]+$/)?.[0] || ".jpg";
+  return `${stem}_BACKUP_ORIGINALE${extension}`;
+}
+
+async function backupOriginalIfPossible() {
+  if (!state.file?.parentDirectoryHandle || !state.file) {
+    return "";
+  }
+  const backupName = backupNameFor(state.file);
+  const backupHandle = await state.file.parentDirectoryHandle.getFileHandle(backupName, { create: true });
+  await writeBlobToHandle(backupHandle, state.file);
+  return backupName;
+}
+
+async function ensureWritePermission(fileHandle) {
+  if (!fileHandle?.queryPermission || !fileHandle?.requestPermission) {
+    return true;
+  }
+  const options = { mode: "readwrite" };
+  if (await fileHandle.queryPermission(options) === "granted") {
+    return true;
+  }
+  return await fileHandle.requestPermission(options) === "granted";
+}
+
+async function saveBlobAs(blob, suggestedName) {
+  if (window.showSaveFilePicker) {
+    const fileHandle = await window.showSaveFilePicker(savePickerOptions(suggestedName));
+    await writeBlobToHandle(fileHandle, blob);
+    return fileHandle.name || suggestedName;
+  }
+  downloadBlob(blob, suggestedName);
+  return suggestedName;
+}
+
+async function overwriteOriginal(blob) {
+  if (!state.fileHandle) {
+    alert("Il browser non ha un permesso di scrittura sul file originale. Uso Salva come.");
+    return saveBlobAs(blob, outputName(false));
+  }
+  if (!confirm("Sovrascrivere il file originale? In caso di dubbio usa Salva come.")) {
+    return "";
+  }
+  if (!await ensureWritePermission(state.fileHandle)) {
+    alert("Permesso di scrittura negato. Uso Salva come.");
+    return saveBlobAs(blob, outputName(false));
+  }
+  await backupOriginalIfPossible();
+  await writeBlobToHandle(state.fileHandle, blob);
+  return state.file?.name || "foto360.jpg";
+}
+
+async function saveCopyInCurrentFolder(blob, filename) {
+  const directoryHandle = state.file?.parentDirectoryHandle || state.folderHandle;
+  if (directoryHandle?.getFileHandle) {
+    const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
+    await writeBlobToHandle(fileHandle, blob);
+    return filename;
+  }
+  return saveBlobAs(blob, filename);
+}
+
+function loadFolderIndex(index) {
+  if (index < 0 || index >= state.folderFiles.length) {
+    return;
+  }
+  loadPhoto(state.folderFiles[index], { files: state.folderFiles, index });
+}
+
+async function saveImage(includeMasks, mode = "saveAs") {
   if (!state.sourceData || state.saving) {
     return;
   }
@@ -867,12 +1094,28 @@ async function saveImage(includeMasks) {
     const jpeg = await canvasToJpegBlob(canvas);
     const withXmp = await injectXmp(jpeg, canvas.width, canvas.height);
     const filename = outputName(includeMasks);
-    downloadBlob(withXmp, filename);
-    state.lastOutputName = filename;
+    let savedName = filename;
+    if (mode === "overwrite" && !includeMasks) {
+      savedName = await overwriteOriginal(withXmp);
+    } else if (mode === "copyNext" && !includeMasks) {
+      savedName = await saveCopyInCurrentFolder(withXmp, filename);
+    } else {
+      savedName = await saveBlobAs(withXmp, filename);
+    }
+    if (!savedName) {
+      return;
+    }
+    rememberSavedBlob(withXmp, savedName);
     refs.fixedText.textContent = includeMasks ? "Privacy salvata" : "Foto 360 salvata";
     setProgress(1);
+    if (mode === "copyNext" && state.folderIndex < state.folderFiles.length - 1) {
+      setTimeout(() => loadFolderIndex(state.folderIndex + 1), 250);
+    }
   } catch (error) {
     console.error(error);
+    if (error.name === "AbortError") {
+      return;
+    }
     alert(`Errore durante il salvataggio: ${error.message}`);
   } finally {
     setTimeout(() => setBusy(false), 450);
@@ -939,7 +1182,7 @@ function resetNadirParams() {
 }
 
 function bindEvents() {
-  $("#openPhotoButton").addEventListener("click", () => refs.photoInput.click());
+  $("#openPhotoButton").addEventListener("click", openSinglePhotoSelection);
   $("#openFolderButton").addEventListener("click", () => {
     if (refs.folderDialog?.showModal) {
       refs.folderDialog.showModal();
@@ -959,14 +1202,15 @@ function bindEvents() {
 
   $("#previousButton").addEventListener("click", () => {
     if (state.folderIndex > 0) {
-      loadPhoto(state.folderFiles[state.folderIndex - 1], { files: state.folderFiles, index: state.folderIndex - 1 });
+      loadFolderIndex(state.folderIndex - 1);
     }
   });
   $("#nextButton").addEventListener("click", () => {
     if (state.folderIndex < state.folderFiles.length - 1) {
-      loadPhoto(state.folderFiles[state.folderIndex + 1], { files: state.folderFiles, index: state.folderIndex + 1 });
+      loadFolderIndex(state.folderIndex + 1);
     }
   });
+  $("#refreshFolderButton").addEventListener("click", () => refreshFolder(true));
 
   refs.yawSlider.addEventListener("input", (event) => setSliderValue("yaw", event.target.value));
   refs.pitchSlider.addEventListener("input", (event) => setSliderValue("pitch", event.target.value));
@@ -1000,8 +1244,9 @@ function bindEvents() {
   });
   $("#resetViewButton").addEventListener("click", () => resetView());
   $("#saveOrientedButton").addEventListener("click", () => saveImage(false));
+  $("#overwriteButton").addEventListener("click", () => saveImage(false, "overwrite"));
+  $("#saveNextButton").addEventListener("click", () => saveImage(false, "copyNext"));
   $("#savePrivacyButton").addEventListener("click", () => saveImage(true));
-  $("#savePrivacyButtonTop").addEventListener("click", () => saveImage(true));
   $("#resetPrivacyButton").addEventListener("click", () => {
     state.masks = [];
     updateControls();
@@ -1014,7 +1259,32 @@ function bindEvents() {
   $("#privacyTuneButton").addEventListener("click", () => refs.privacyDialog.showModal());
   $("#privacyHelpButton").addEventListener("click", () => refs.helpDialog.showModal());
   $("#helpButton").addEventListener("click", () => refs.helpDialog.showModal());
-  $("#settingsButton").addEventListener("click", () => alert("Nella versione online non serve configurare visualizzatori esterni: apri, ritocca e scarica dal browser."));
+  $("#settingsButton").addEventListener("click", () => openSettings());
+  $("#setViewerButton").addEventListener("click", () => openSettings("viewer"));
+  $("#openViewerButton").addEventListener("click", () => {
+    if (!state.lastSavedUrl) {
+      return;
+    }
+    alert("Il browser non può avviare direttamente FSPViewer. Apro il risultato in una nuova scheda; per FSPViewer usa il JPG salvato da Esplora risorse o dalla barra download.");
+    window.open(state.lastSavedUrl, "_blank", "noopener");
+  });
+  $$(".settings-tab").forEach((button) => {
+    button.addEventListener("click", () => selectSettingsTab(button.dataset.settingsTab));
+  });
+  $("#closeSettingsButton").addEventListener("click", () => {
+    applySettingsFromDialog();
+    refs.settingsDialog.close();
+  });
+  $("#resetSettingsButton").addEventListener("click", () => {
+    state.settings.orientedSuffix = "_ORIENTATA";
+    state.settings.maskedSuffix = "_MASCHERATO";
+    state.settings.jpegQuality = 0.98;
+    syncSettingsDialog();
+    saveSettings();
+  });
+  $("#openFspDownloadButton").addEventListener("click", () => {
+    window.open("https://www.fsoft.it/FSPViewer/download/", "_blank", "noopener");
+  });
   $("#fullscreenButton").addEventListener("click", () => refs.previewFrame.requestFullscreen?.());
   refs.fullscreenCloseButton.addEventListener("click", () => document.exitFullscreen?.());
   document.addEventListener("fullscreenchange", syncFullscreenPrivacy);
@@ -1089,6 +1359,7 @@ function bindEvents() {
   window.addEventListener("resize", () => renderPerspective());
 }
 
+loadSettings();
 bindEvents();
 updateControls();
 updateLabels();

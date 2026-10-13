@@ -44,6 +44,7 @@
           <div class="folder-controls">
             <button id="previousButton" class="action-button ghost" type="button" disabled>PRECEDENTE</button>
             <button id="nextButton" class="action-button ghost" type="button" disabled>SUCCESSIVA</button>
+            <button id="refreshFolderButton" class="action-button ghost" type="button" disabled>AGGIORNA</button>
             <label class="check-row"><input id="filter360" type="checkbox" checked> <span>Mostra solo probabili foto 360</span></label>
           </div>
         </div>
@@ -88,7 +89,8 @@
         <label class="check-row nadir-arrow"><input id="nadirHint" type="checkbox"> <span>Freccia «scorri in basso» al centro della vista frontale</span></label>
         <div class="button-row save-buttons">
           <button id="saveOrientedButton" class="action-button green filled" type="button" disabled>SALVA<br>COME</button>
-          <button id="savePrivacyButtonTop" class="action-button orange filled" type="button" disabled>SALVA<br>PRIVACY</button>
+          <button id="overwriteButton" class="action-button green filled" type="button" disabled>SOVRASCRIVI<br>ORIGINALE</button>
+          <button id="saveNextButton" class="action-button green outline" type="button" disabled>SALVA COPIA e<br>vai a SUCCESSIVA</button>
         </div>
         <div id="saveProgress" class="save-progress hidden">
           <strong>Salvataggio in corso</strong>
@@ -131,6 +133,11 @@
       <span id="fileInfo">Nessuna foto caricata</span>
       <span id="viewInfo">Yaw 0.00° · Pitch 0.00° · Roll 0.00° · FOV 80.00°</span>
       <strong id="fixedText">Vista non fissata</strong>
+    </section>
+
+    <section class="viewer-row">
+      <button id="setViewerButton" class="action-button blue outline" type="button">Imposta FSPViewer</button>
+      <button id="openViewerButton" class="action-button ghost" type="button" disabled>Apri in FSPViewer</button>
     </section>
 
     <section class="privacy-row">
@@ -201,12 +208,37 @@
   <dialog id="helpDialog" class="help-dialog">
     <form method="dialog"><button class="dialog-close" value="close" aria-label="Chiudi">×</button></form>
     <h2>Aiuto - Orienta360 Online</h2>
-    <p><strong>Apri Foto</strong> carica una JPG, JPEG o PNG panoramica dal tuo PC. La foto resta nel browser e non viene caricata su un server.</p>
+    <h3>1. Seleziona Foto</h3>
+    <p><strong>Apri Foto</strong> carica una singola foto 360° JPG, JPEG o PNG. La foto resta nel browser e non viene caricata su un server.</p>
     <p><strong>Apri Cartella</strong> chiede al browser il permesso di leggere solo immagini JPG, JPEG o PNG dalla cartella scelta: le immagini restano sul PC dell'utente e non vengono inviate a GitHub.</p>
-    <p><strong>Cambia Vista</strong> regola Yaw, Pitch, Roll e zoom dell'anteprima. Trascina l'anteprima nella direzione in cui vuoi guardare.</p>
-    <p><strong>Salva Come</strong> produce una nuova JPG 360 orientata e inserisce i metadata GPano per il riconoscimento come panoramica.</p>
-    <p><strong>Privacy</strong> permette maschere ovali per volti, rettangolari per targhe, maschera fotografo e copertura Nadir con mosaico o logo. Se non hai usato <strong>Fissa questa vista</strong>, il salvataggio privacy mantiene l'orientamento originale della foto.</p>
-    <p>Versione online senza video: per video e lavorazioni pesanti resta disponibile l'app locale.</p>
+    <p>La spunta <strong>Mostra solo probabili foto 360</strong> è utile quando nella cartella sono presenti sia foto normali sia foto 360°.</p>
+    <p><strong>Aggiorna</strong> è utile se aggiungi nuove immagini nella cartella da Esplora risorse mentre la cartella è già aperta nell'app.</p>
+
+    <h3>2. Cambia Vista</h3>
+    <p>Usa i controlli di zoom solo per analizzare meglio l'anteprima durante il lavoro: il livello di zoom non è un parametro che possa essere fisicamente salvato in una nuova foto 360.</p>
+    <p>Trascina il mouse nell'anteprima: orizzontalmente, <strong>Yaw</strong>, per modificare la vista iniziale; verticalmente, <strong>Pitch</strong>, per inclinare la vista verso alto o basso.</p>
+    <p><strong>Trascina nella direzione in cui vuoi spostare la vista</strong>: verso destra per guardare più a destra, verso l'alto per guardare più in alto.</p>
+    <p><strong>Shift+trascinamento</strong> accelera lo spostamento. In alternativa puoi usare le frecce sui lati dell'anteprima oppure gli slider.</p>
+    <p>Poi salva le modifiche di orientamento con <strong>Fissa questa vista</strong> oppure resetta l'orientamento.</p>
+
+    <h3>3. Salvataggio</h3>
+    <p>Per attrarre l'attenzione verso il nadir dell'immagine, puoi sovrapporre una freccia rivolta verso il basso spuntando <strong>Freccia “scorri in basso” al centro della vista frontale</strong>.</p>
+    <p><strong>Salva come</strong> crea una nuova copia e, nei browser compatibili, apre la finestra di salvataggio con il nome proposto.</p>
+    <p><strong>Sovrascrivi originale</strong> modifica il file originale quando il browser ha ricevuto un permesso di scrittura sul file o sulla cartella. Se possibile, prima crea un backup <strong>_BACKUP_ORIGINALE</strong>; se il browser non concede quel permesso, viene proposta una copia.</p>
+    <p><strong>Salva copia e vai a successiva</strong> salva una copia con suffisso <strong>_ORIENTATA</strong> e passa alla foto seguente nella sequenza della cartella scelta.</p>
+    <p>Se devi solo mascherare volti, targhe, persone o altri dettagli senza cambiare l'orientamento della foto, puoi saltare i comandi del box <strong>Cambia Vista</strong> e usare direttamente la sezione <strong>Privacy</strong>.</p>
+
+    <h3>4. Visualizzatore</h3>
+    <p><strong>Imposta FSPViewer</strong> apre la scheda Visualizzatore nelle impostazioni. Nella versione online il browser non può lanciare direttamente un programma installato sul PC, ma la scheda resta utile per ricordare il percorso e la procedura di verifica.</p>
+    <p><strong>Apri in FSPViewer</strong> resta disponibile come promemoria operativo: dopo il salvataggio apri il JPG scaricato con FSPViewer da Esplora risorse o dalla barra download del browser.</p>
+
+    <h3>5. Privacy</h3>
+    <p><strong>Maschera Nadir</strong> si applica in automatico sul polo basso dell'immagine.</p>
+    <p><strong>Maschera fotografo</strong> è un ovale che in prossimità dei poli diventa una maschera polare e può essere abbinata alla Maschera Nadir.</p>
+    <p><strong>Regola</strong> permette di modificare l'ampiezza della Maschera Nadir e, quando usi il mosaico, la grana applicata alle maschere privacy.</p>
+    <p>Per il <strong>Nadir</strong> puoi scegliere tra copertura a mosaico oppure <strong>logo</strong>. In modalità logo puoi selezionare un file immagine e regolare opacità, sfumatura dei bordi, dimensione, rotazione, ovalizzazione e spostamento.</p>
+    <p><strong>Click</strong> sull'anteprima = posiziona maschera. <strong>Trascinamento</strong> = sposta la vista. <strong>Shift+trascinamento</strong> = spostamento rapido. <strong>Ctrl+Z</strong> annulla l'ultima maschera.</p>
+    <p><strong>Salva Privacy</strong> salva i mascheramenti applicati e produce un file con suffisso <strong>_MASCHERATO</strong>. Se non hai usato <strong>Fissa questa vista</strong>, il salvataggio privacy mantiene l'orientamento originale della foto.</p>
   </dialog>
 
   <dialog id="folderDialog" class="help-dialog folder-dialog">
@@ -217,6 +249,47 @@
     <div class="dialog-actions folder-actions">
       <button id="cancelFolderButton" class="action-button blue outline" type="button">ANNULLA</button>
       <button id="confirmFolderButton" class="action-button blue filled" type="button">SCEGLI CARTELLA</button>
+    </div>
+  </dialog>
+
+  <dialog id="settingsDialog" class="settings-dialog">
+    <form method="dialog"><button class="dialog-close" value="close" aria-label="Chiudi">×</button></form>
+    <h2>Impostazioni</h2>
+    <div class="settings-tabs">
+      <button class="settings-tab active" data-settings-tab="general" type="button">Generali</button>
+      <button class="settings-tab" data-settings-tab="saving" type="button">Salvataggio</button>
+      <button class="settings-tab" data-settings-tab="viewer" type="button">Visualizzatore</button>
+    </div>
+
+    <section class="settings-panel active" data-settings-panel="general">
+      <label class="check-row"><input id="rememberFolderSetting" type="checkbox" checked disabled> <span>Ricorda ultima cartella</span></label>
+      <p>Nel browser la cartella va confermata dall'utente a ogni sessione per motivi di sicurezza.</p>
+      <label class="check-row"><input id="rememberWindowSetting" type="checkbox" checked disabled> <span>Ricorda dimensione/posizione finestra</span></label>
+      <p>La versione online segue dimensione e posizione della finestra del browser.</p>
+    </section>
+
+    <section class="settings-panel" data-settings-panel="saving">
+      <label>Suffisso file orientato</label>
+      <input id="orientedSuffix" type="text" value="_ORIENTATA">
+      <label>Suffisso file privacy</label>
+      <input id="maskedSuffix" type="text" value="_MASCHERATO">
+      <label>Qualità JPEG</label>
+      <input id="jpegQuality" type="range" min="85" max="100" value="98" step="1">
+      <p>Quando disponibile, il browser apre una finestra di salvataggio. In caso contrario salva nella cartella Download.</p>
+    </section>
+
+    <section class="settings-panel" data-settings-panel="viewer">
+      <label>Visualizzatore consigliato</label>
+      <input id="viewerPath" type="text" value="C:\Program Files\FSPViewer\FSPViewer.exe">
+      <p>La web-app non può avviare direttamente programmi locali o leggere percorsi eseguibili. Il percorso resta come riferimento per aprire manualmente il JPG salvato con FSPViewer.</p>
+      <div class="dialog-actions">
+        <button id="openFspDownloadButton" class="action-button blue outline" type="button">Pagina FSPViewer</button>
+      </div>
+    </section>
+
+    <div class="dialog-actions settings-actions">
+      <button id="resetSettingsButton" class="action-button blue outline" type="button">RIPRISTINA PREDEFINITI</button>
+      <button id="closeSettingsButton" class="action-button green filled" type="button">SALVA</button>
     </div>
   </dialog>
 

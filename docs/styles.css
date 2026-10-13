@@ -214,6 +214,10 @@ button:disabled {
   min-width: 104px;
 }
 
+#refreshFolderButton {
+  grid-column: 2;
+}
+
 .folder-controls .check-row {
   grid-column: 1 / -1;
 }
@@ -230,8 +234,7 @@ button:disabled {
   text-align: center;
 }
 
-.select-layout .action-button,
-.save-buttons .action-button {
+.select-layout .action-button {
   white-space: nowrap;
 }
 
@@ -332,11 +335,19 @@ input[type="range"] {
 }
 
 .save-buttons {
+  display: grid;
+  grid-template-columns: 0.8fr 1.05fr 1.35fr;
   margin-top: 0;
+  align-items: stretch;
+}
+
+.save-buttons .action-button {
+  min-width: 0;
+  white-space: normal;
 }
 
 .save-progress {
-  margin-top: 26px;
+  margin-top: 18px;
   font-size: 12px;
 }
 
@@ -579,6 +590,17 @@ input[type="range"] {
   color: var(--teal);
 }
 
+.viewer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+}
+
+.viewer-row .action-button {
+  min-width: 176px;
+}
+
 .privacy-row {
   display: flex;
   align-items: center;
@@ -667,6 +689,12 @@ dialog::backdrop {
   line-height: 1.45;
 }
 
+.help-dialog h3 {
+  margin: 18px 0 6px;
+  color: var(--teal);
+  font-size: 15px;
+}
+
 .dialog-close {
   position: absolute;
   top: 10px;
@@ -685,10 +713,79 @@ dialog::backdrop {
 }
 
 .floating-dialog h2,
-.help-dialog h2 {
+.help-dialog h2,
+.settings-dialog h2 {
   margin: 0 0 18px;
   color: var(--orange-active);
   font-size: 17px;
+}
+
+.settings-dialog {
+  width: min(900px, calc(100vw - 64px));
+  min-height: 620px;
+  padding: 24px;
+}
+
+.settings-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin: 28px 0 24px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #eef6ff;
+}
+
+.settings-tab {
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.settings-tab.active {
+  border-color: #c8d8f0;
+  background: white;
+  color: var(--text);
+}
+
+.settings-panel {
+  display: none;
+  max-width: 820px;
+  color: var(--muted);
+}
+
+.settings-panel.active {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(260px, 1fr);
+  align-items: center;
+  gap: 14px 18px;
+}
+
+.settings-panel .check-row,
+.settings-panel p,
+.settings-panel .dialog-actions {
+  grid-column: 1 / -1;
+}
+
+.settings-panel input[type="text"] {
+  min-height: 38px;
+  border: 1px solid #c8d8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: white;
+}
+
+.settings-actions {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 20px;
+  justify-content: space-between;
 }
 
 .form-grid {
