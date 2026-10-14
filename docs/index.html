@@ -33,24 +33,16 @@
         <h2 class="card-title blue">Seleziona Foto</h2>
         <p class="card-subtitle">Seleziona una foto a 360° o una cartella</p>
         <div class="select-layout">
-          <div class="single-column">
-            <h3>Foto singola</h3>
-            <button id="openPhotoButton" class="action-button blue filled" type="button">APRI FOTO</button>
-            <button id="openVideoButton" class="action-button video filled" type="button">APRI VIDEO<br><span>(sperimentale)</span></button>
-          </div>
-          <div class="folder-column">
-            <h3>Cartella</h3>
-            <button id="openFolderButton" class="action-button blue filled" type="button">APRI CARTELLA</button>
-            <label class="check-row"><input id="filter360" type="checkbox" checked> <span>Mostra solo probabili foto 360</span></label>
-            <label class="check-row video-filter"><input id="filterVideo360" type="checkbox" checked> <span>Mostra solo probabili video 360</span></label>
-          </div>
-          <div class="folder-controls previous-controls">
-            <button id="previousButton" class="action-button blue ghost" type="button" disabled>PRECEDENTE</button>
-          </div>
-          <div class="folder-controls next-controls">
-            <button id="nextButton" class="action-button blue ghost" type="button" disabled>SUCCESSIVA</button>
-            <button id="refreshFolderButton" class="action-button blue ghost" type="button" disabled>AGGIORNA</button>
-          </div>
+          <h3 class="single-title">Foto singola</h3>
+          <h3 class="folder-title">Cartella</h3>
+          <button id="openPhotoButton" class="action-button blue filled" type="button">APRI FOTO</button>
+          <button id="openVideoButton" class="action-button video filled" type="button">APRI VIDEO<br><span>(sperimentale)</span></button>
+          <button id="openFolderButton" class="action-button blue filled" type="button">APRI CARTELLA</button>
+          <label class="check-row photo-filter"><input id="filter360" type="checkbox" checked> <span>Mostra solo probabili foto 360</span></label>
+          <label class="check-row video-filter"><input id="filterVideo360" type="checkbox" checked> <span>Mostra solo probabili video 360</span></label>
+          <button id="previousButton" class="action-button blue ghost" type="button" disabled>PRECEDENTE</button>
+          <button id="nextButton" class="action-button blue ghost" type="button" disabled>SUCCESSIVA</button>
+          <button id="refreshFolderButton" class="action-button blue ghost" type="button" disabled>AGGIORNA</button>
         </div>
       </article>
 
