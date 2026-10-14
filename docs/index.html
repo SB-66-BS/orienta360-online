@@ -166,7 +166,7 @@
     <form method="dialog">
       <button class="dialog-close" value="close" aria-label="Chiudi">×</button>
     </form>
-    <h2>Regola mascheramenti Privacy</h2>
+    <h2 class="dialog-drag-handle">Regola mascheramenti Privacy <span>trascina</span></h2>
     <div class="form-grid">
       <label>Tipo Nadir</label>
       <div class="segmented">
@@ -181,28 +181,59 @@
       </div>
 
       <label>Dimensione Nadir</label>
-      <input id="nadirSize" type="range" min="14" max="42" value="26" step="1">
+      <div class="privacy-range">
+        <input id="nadirSize" type="range" min="14" max="42" value="26" step="1">
+        <output id="nadirSizeValue">26°</output>
+      </div>
 
       <label class="mosaic-only">Grana mosaico</label>
-      <input id="mosaicScale" class="mosaic-only" type="range" min="0.7" max="2.2" value="1" step="0.1">
+      <div class="privacy-range mosaic-only">
+        <input id="mosaicScale" type="range" min="0.7" max="2.2" value="1" step="0.1">
+        <output id="mosaicScaleValue">x1.0</output>
+      </div>
 
       <label class="logo-only">Opacità logo</label>
-      <input id="logoOpacity" class="logo-only" type="range" min="5" max="100" value="78" step="1">
+      <div class="privacy-range logo-only">
+        <input id="logoOpacity" type="range" min="5" max="100" value="78" step="1">
+        <output id="logoOpacityValue">78%</output>
+      </div>
 
       <label class="logo-only">Sfumatura bordo</label>
-      <input id="logoFeather" class="logo-only" type="range" min="0" max="80" value="22" step="1">
+      <div class="privacy-range logo-only">
+        <input id="logoFeather" type="range" min="0" max="80" value="22" step="1">
+        <output id="logoFeatherValue">22%</output>
+      </div>
 
       <label class="logo-only">Ovalizzazione</label>
-      <input id="logoOval" class="logo-only" type="range" min="-60" max="60" value="0" step="1">
+      <div class="privacy-range logo-only">
+        <input id="logoOval" type="range" min="-60" max="60" value="0" step="1">
+        <output id="logoOvalValue">0</output>
+      </div>
 
       <label class="logo-only">Ruota logo</label>
-      <input id="logoRotation" class="logo-only" type="range" min="0" max="360" value="0" step="1">
+      <div class="privacy-range privacy-range-stack logo-only">
+        <input id="logoRotation" type="range" min="0" max="360" value="0" step="1">
+        <output id="logoRotationValue">0°</output>
+        <div class="rotation-presets">
+          <button type="button" data-logo-rotation="90">90°</button>
+          <button type="button" data-logo-rotation="180">180°</button>
+          <button type="button" data-logo-rotation="270">270°</button>
+          <button type="button" data-logo-rotation="360">360°</button>
+          <span>oppure usa lo slider</span>
+        </div>
+      </div>
 
       <label class="logo-only">Sposta X</label>
-      <input id="logoOffsetX" class="logo-only" type="range" min="-55" max="55" value="0" step="1">
+      <div class="privacy-range logo-only">
+        <input id="logoOffsetX" type="range" min="-55" max="55" value="0" step="1">
+        <output id="logoOffsetXValue">0%</output>
+      </div>
 
       <label class="logo-only">Sposta Y</label>
-      <input id="logoOffsetY" class="logo-only" type="range" min="-55" max="55" value="0" step="1">
+      <div class="privacy-range logo-only">
+        <input id="logoOffsetY" type="range" min="-55" max="55" value="0" step="1">
+        <output id="logoOffsetYValue">0%</output>
+      </div>
     </div>
     <div class="dialog-actions">
       <button id="resetNadirButton" class="action-button orange outline" type="button">RESET PARAMETRI</button>
@@ -211,39 +242,78 @@
 
   <dialog id="helpDialog" class="help-dialog">
     <form method="dialog"><button class="dialog-close" value="close" aria-label="Chiudi">×</button></form>
-    <h2>Aiuto - Orienta360 Online</h2>
+    <h2>Help Orienta360</h2>
     <h3>1. Seleziona Foto</h3>
-    <p><strong>Apri Foto</strong> carica una singola foto 360° JPG, JPEG o PNG. La foto resta nel browser e non viene caricata su un server.</p>
-    <p><strong>Apri Cartella</strong> chiede al browser il permesso di leggere solo immagini JPG, JPEG o PNG dalla cartella scelta: le immagini restano sul PC dell'utente e non vengono inviate a GitHub.</p>
+    <p><strong>Apri</strong> una singola foto 360° oppure una cartella contenente più immagini per selezionarle in sequenza.</p>
     <p>La spunta <strong>Mostra solo probabili foto 360</strong> è utile quando nella cartella sono presenti sia foto normali sia foto 360°.</p>
     <p><strong>Aggiorna</strong> è utile se aggiungi nuove immagini nella cartella da Esplora risorse mentre la cartella è già aperta nell'app.</p>
-    <p><strong>Video</strong> è predisposto nell'interfaccia per allinearsi alla versione locale, ma la lavorazione video online resta in preparazione.</p>
 
     <h3>2. Cambia Vista</h3>
     <p>Usa i controlli di zoom solo per analizzare meglio l'anteprima durante il lavoro: il livello di zoom non è un parametro che possa essere fisicamente salvato in una nuova foto 360.</p>
-    <p>Trascina il mouse nell'anteprima: orizzontalmente, <strong>Yaw</strong>, per modificare la vista iniziale; verticalmente, <strong>Pitch</strong>, per inclinare la vista verso alto o basso.</p>
+    <p>Trascina il mouse nell'anteprima:</p>
+    <ul>
+      <li>Orizzontalmente, <strong>Yaw</strong>, per modificare la vista iniziale.</li>
+      <li>Verticalmente, <strong>Pitch</strong>, inclina la vista verso alto o basso. Procedi con piccoli spostamenti: quando la vista si avvicina al polo alto o al polo basso, anche variazioni minime possono cambiare molto l'inquadratura.</li>
+    </ul>
     <p><strong>Trascina nella direzione in cui vuoi spostare la vista</strong>: verso destra per guardare più a destra, verso l'alto per guardare più in alto.</p>
-    <p><strong>Shift+trascinamento</strong> accelera lo spostamento. In alternativa puoi usare le frecce sui lati dell'anteprima oppure gli slider.</p>
+    <p><strong>Shift+trascinamento</strong> accelera lo spostamento. In alternativa puoi usare le frecce sui lati dell'anteprima oppure gli slider <strong>Sposta orizzontale</strong>, <strong>Sposta verticale</strong> e <strong>Livella orizzonte</strong>.</p>
     <p>Poi salva le modifiche di orientamento con <strong>Fissa questa vista</strong> oppure resetta l'orientamento.</p>
 
     <h3>3. Salvataggio</h3>
     <p>Per attrarre l'attenzione verso il nadir dell'immagine, puoi sovrapporre una freccia rivolta verso il basso spuntando <strong>Freccia “scorri in basso” al centro della vista frontale</strong>.</p>
-    <p><strong>Salva come</strong> crea una nuova copia e, nei browser compatibili, apre la finestra di salvataggio con il nome proposto.</p>
-    <p><strong>Sovrascrivi originale</strong> modifica il file originale quando il browser ha ricevuto un permesso di scrittura sul file o sulla cartella. Se possibile, prima crea un backup <strong>_BACKUP_ORIGINALE</strong>; se il browser non concede quel permesso, viene proposta una copia.</p>
-    <p><strong>Salva copia e vai a successiva</strong> salva una copia con suffisso <strong>_ORIENTATA</strong> e passa alla foto seguente nella sequenza della cartella scelta.</p>
+    <p><strong>Salva come</strong> crea una nuova copia, cioè salva con nome.</p>
+    <p><strong>Sovrascrivi originale</strong> modifica il file originale secondo le impostazioni selezionate, con proposta di mantenere l'originale in un file di backup. Il backup attivo è il default consigliato.</p>
+    <p><strong>Salva copia e vai a successiva</strong> salva una copia della foto nominandola <strong>_ORIENTATA</strong> e passa alla foto seguente nella sequenza della cartella scelta. Non è attivo quando apri una foto singola.</p>
     <p>Se devi solo mascherare volti, targhe, persone o altri dettagli senza cambiare l'orientamento della foto, puoi saltare i comandi del box <strong>Cambia Vista</strong> e usare direttamente la sezione <strong>Privacy</strong>.</p>
 
-    <h3>4. Visualizzatore</h3>
-    <p><strong>Imposta FSPViewer</strong> apre la scheda Visualizzatore nelle impostazioni. Nella versione online il browser non può lanciare direttamente un programma installato sul PC, ma la scheda resta utile per ricordare il percorso e la procedura di verifica.</p>
-    <p><strong>Apri in FSPViewer</strong> resta disponibile come promemoria operativo: dopo il salvataggio apri il JPG scaricato con FSPViewer da Esplora risorse o dalla barra download del browser.</p>
+    <h3>4. Barra inferiore</h3>
+    <h4>Visualizzatore</h4>
+    <p><strong>Imposta FSPViewer</strong>: dopo il salvataggio si attiva la possibilità di scegliere il percorso su disco del visualizzatore 360 FSPViewer consigliato. Il percorso può anche essere configurato nelle Impostazioni dell'App o rilevato automaticamente.</p>
+    <p>Nella cartella <strong>Orienta360\tools</strong> è presente il visualizzatore FSPViewer 2.4. Quando si volesse farne l'upgrade, scaricare FSPViewer dal sito ufficiale <a href="https://www.fsoft.it/FSPViewer/download/">fsoft.it/FSPViewer/download</a>. In base al sistema operativo in uso scegliere l'installer appropriato e poi lanciare l'eseguibile seguendo le istruzioni. Di default il software si installa in <strong>C:\Program Files\FSPViewer\</strong> e si suggerisce di accettare il percorso proposto, aggiornando di conseguenza quello in <strong>Impostazioni - Visualizzatore</strong>.</p>
+    <p><strong>Apri risultato in FSPViewer</strong>: apre un'anteprima veloce del file salvato. In Impostazioni si può richiedere l'apertura automatica dell'immagine dopo il salvataggio.</p>
 
-    <h3>5. Privacy</h3>
+    <h4>Privacy</h4>
     <p><strong>Maschera Nadir</strong> si applica in automatico sul polo basso dell'immagine.</p>
-    <p><strong>Maschera fotografo</strong> è un ovale che in prossimità dei poli diventa una maschera polare e può essere abbinata alla Maschera Nadir.</p>
+    <p><strong>Maschera fotografo</strong> è un ovale che in prossimità dei poli diventa una maschera polare.<br>Può essere abbinata alla Maschera Nadir per coprire una maggiore superficie.</p>
     <p><strong>Regola</strong> permette di modificare l'ampiezza della Maschera Nadir e, quando usi il mosaico, la grana applicata alle maschere privacy.</p>
-    <p>Per il <strong>Nadir</strong> puoi scegliere tra copertura a mosaico oppure <strong>logo</strong>. In modalità logo puoi selezionare un file immagine e regolare opacità, sfumatura dei bordi, dimensione, rotazione, ovalizzazione e spostamento.</p>
-    <p><strong>Click</strong> sull'anteprima = posiziona maschera. <strong>Trascinamento</strong> = sposta la vista. <strong>Shift+trascinamento</strong> = spostamento rapido. <strong>Ctrl+Z</strong> annulla l'ultima maschera.</p>
-    <p><strong>Salva Privacy</strong> salva i mascheramenti applicati e produce un file con suffisso <strong>_MASCHERATO</strong>. Se non hai usato <strong>Fissa questa vista</strong>, il salvataggio privacy mantiene l'orientamento originale della foto.</p>
+    <p>Per il <strong>Nadir</strong> puoi scegliere tra copertura a mosaico oppure <strong>logo</strong>. In modalità logo puoi selezionare un file immagine e regolare opacità, sfumatura dei bordi, dimensione, rotazione, ovalizzazione orizzontale o verticale e piccolo spostamento dal centro.</p>
+    <p>La finestra <strong>Regola</strong> si apre lateralmente per lasciare visibile l'anteprima mentre modifichi i parametri del Nadir; puoi anche trascinarla dalla testata per posizionarla dove ti è più comoda. La rotazione del logo può essere regolata liberamente con lo slider oppure impostata rapidamente con i valori 90°, 180°, 270° e 360°.</p>
+    <p>In modalità <strong>Logo</strong> la grana mosaico non si applica al logo, che mantiene la propria grafica: per integrarlo nell'immagine usa soprattutto opacità, sfumatura bordo, dimensione, rotazione, ovalizzazione e spostamento.</p>
+    <p>Il logo scelto e i parametri del Nadir vengono ricordati localmente dall'app per i lavori successivi. Con <strong>Reset parametri</strong> puoi tornare ai valori base di dimensione, grana, opacità, sfumatura, rotazione, ovalizzazione e spostamento senza cancellare il file logo selezionato.</p>
+    <p>Per ottenere un logo Nadir nitido:</p>
+    <ul>
+      <li>usa preferibilmente un <strong>PNG con trasparenza</strong>, non un JPG;</li>
+      <li>prepara un file quadrato almeno <strong>2000 x 2000 px</strong>, meglio <strong>2400 x 2400 px</strong> se il logo viene usato grande;</li>
+      <li>parti da una grafica vettoriale o da un file originale, evitando screenshot o immagini già ridotte;</li>
+      <li>esporta con bordi e testi antialias e lascia un margine trasparente intorno al disegno, circa <strong>8-12%</strong>.</li>
+    </ul>
+    <p>L'anteprima dell'app lavora su una versione ridotta della pano: a zoom elevati può apparire più ruvida del file finale. Il risultato va valutato anche sul file <strong>_MASCHERATO</strong> aperto in FSPViewer.</p>
+    <p><strong>Click</strong> sull'anteprima = posiziona maschera.</p>
+    <p><strong>Trascinamento</strong> mouse = sposta la vista per cercare e cliccare nuovi volti, targhe o fotografo.</p>
+    <p><strong>Shift+trascinamento</strong> = spostamento rapido della vista.</p>
+    <p><strong>Ctrl+Z</strong> continua ad annullare l'ultima maschera.</p>
+
+    <p>In modalità <strong>Volti</strong> o <strong>Targhe</strong>:</p>
+    <ul>
+      <li><strong>Click</strong> sull'anteprima = <strong>aggiunge</strong> maschere ovali o rettangolari nei punti cliccati.</li>
+    </ul>
+
+    <p>In modalità <strong>Fotografo</strong>:</p>
+    <ul>
+      <li><strong>Click</strong> sull'anteprima = posiziona e <strong>sposta</strong> la maschera fotografo nel punto cliccato.</li>
+      <li><strong>Ctrl+click</strong> = aggiunge più maschere fotografo adiacenti o distanziate.</li>
+      <li><strong>Ctrl+trascinamento</strong> = estende i pixel strisciando la maschera fotografo nelle varie direzioni.</li>
+    </ul>
+    <p>Tutti i comandi si applicano sia nell'anteprima normale, sia nell'anteprima grande.</p>
+    <p><strong>Salva Privacy</strong> permette di salvare i mascheramenti applicati e produce un file con suffisso <strong>_MASCHERATO</strong>.</p>
+
+    <h3>5. Impostazioni</h3>
+    <p>La finestra <strong>Impostazioni</strong> raccoglie le opzioni generali, le preferenze di salvataggio e le opzioni del visualizzatore esterno.</p>
+    <ul>
+      <li><strong>Generali</strong>: ricorda l'ultima cartella usata e la dimensione o posizione della finestra.</li>
+      <li><strong>Salvataggio</strong>: imposta suffisso del file orientato, qualità JPEG e backup dell'originale.</li>
+      <li><strong>Visualizzatore</strong>: configura FSPViewer e l'eventuale apertura automatica dopo il salvataggio.</li>
+    </ul>
   </dialog>
 
   <dialog id="folderDialog" class="help-dialog folder-dialog">
@@ -262,13 +332,25 @@
     <h2>Istruzioni mascheramento Privacy</h2>
     <p><strong>Maschera Nadir</strong> si applica in automatico sul polo basso dell'immagine.</p>
     <p><strong>Maschera fotografo</strong> è un ovale che in prossimità dei poli diventa una maschera polare. Può essere abbinata alla Maschera Nadir per coprire una maggiore superficie.</p>
-    <p><strong>REGOLA</strong> permette di usare sul Nadir il mosaico oppure un logo con opacità, sfumatura, rotazione, forma e spostamento regolabili.</p>
+    <p><strong>Regola</strong> permette di usare sul Nadir il mosaico oppure un logo con opacità, sfumatura, rotazione, forma e spostamento regolabili.</p>
     <p><strong>Click</strong> sull'anteprima = posiziona maschera.</p>
-    <p><strong>Trascinamento mouse</strong> = sposta la vista per cercare e cliccare nuovi volti/targhe/fotografo.</p>
+    <p><strong>Trascinamento mouse</strong> = sposta la vista per cercare e cliccare nuovi volti, targhe o fotografo.</p>
     <p><strong>Shift+trascinamento</strong> = spostamento rapido della vista.</p>
     <p><strong>Ctrl+Z</strong> continua ad annullare l'ultima maschera.</p>
-    <p>In modalità <strong>Volti</strong> o <strong>Targhe</strong>, il click aggiunge maschere ovali o rettangolari nei punti cliccati.</p>
-    <p>In modalità <strong>Fotografo</strong>, il click posiziona e sposta la maschera fotografo; <strong>Ctrl+click</strong> aggiunge maschere fotografo adiacenti o distanziate; <strong>Ctrl+trascinamento</strong> estende i pixel strisciando la maschera.</p>
+
+    <p>In modalità <strong>Volti</strong> o <strong>Targhe</strong>:</p>
+    <ul>
+      <li><strong>Click</strong> sull'anteprima = <strong>aggiunge</strong> maschere ovali o rettangolari nei punti cliccati.</li>
+    </ul>
+
+    <p>In modalità <strong>Fotografo</strong>:</p>
+    <ul>
+      <li><strong>Click</strong> sull'anteprima = posiziona e <strong>sposta</strong> la maschera fotografo nel punto cliccato.</li>
+      <li><strong>Ctrl+click</strong> = aggiunge più maschere fotografo adiacenti o distanziate.</li>
+      <li><strong>Ctrl+trascinamento</strong> = estende i pixel strisciando la maschera fotografo nelle varie direzioni.</li>
+    </ul>
+    <p>Tutti i comandi si applicano sia nell'anteprima normale, sia nell'anteprima grande.</p>
+    <p><strong>Salva Privacy</strong> permette di salvare i mascheramenti applicati e produce un file con suffisso <strong>_MASCHERATO</strong>.</p>
   </dialog>
 
   <dialog id="overwriteDialog" class="confirm-dialog">
@@ -305,8 +387,8 @@
       <input id="maskedSuffix" type="text" value="_MASCHERATO">
       <label>Qualità JPG/JPEG</label>
       <div class="range-with-value">
-        <input id="jpegQuality" type="range" min="85" max="100" value="98" step="1">
-        <output id="jpegQualityValue">98</output>
+        <input id="jpegQuality" type="range" min="85" max="100" value="100" step="1">
+        <output id="jpegQualityValue">100</output>
       </div>
       <p>Quando disponibile, il browser apre una finestra di salvataggio. In caso contrario salva nella cartella Download.</p>
     </section>

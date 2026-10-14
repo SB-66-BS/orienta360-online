@@ -94,7 +94,8 @@ const state = {
   settings: {
     orientedSuffix: "_ORIENTATA",
     maskedSuffix: "_MASCHERATO",
-    jpegQuality: 0.98,
+    jpegQuality: 1,
+    settingsVersion: 2,
   },
   viewFixed: false,
   fixedYaw: 0,
@@ -359,6 +360,17 @@ function updateLabels() {
   refs.fovSlider.value = state.fov;
 }
 
+function updateFileInfo() {
+  if (!state.file) {
+    refs.fileInfo.textContent = "Nessuna foto caricata";
+    return;
+  }
+  const folderCount = state.folderFiles.length > 1 && state.folderIndex >= 0
+    ? ` - Foto ${state.folderIndex + 1} di ${state.folderFiles.length}`
+    : "";
+  refs.fileInfo.textContent = `${state.file.name} - ${state.sourceWidth}x${state.sourceHeight}${folderCount} - foto 360 online`;
+}
+
 function updateControls() {
   const hasPhoto = Boolean(state.sourceData);
   const busy = state.saving || state.loading;
@@ -571,7 +583,7 @@ async function loadPhoto(file, folderContext = null) {
       state.folderIndex = -1;
     }
 
-    refs.fileInfo.textContent = `${file.name} - ${state.sourceWidth}x${state.sourceHeight} - foto 360 online`;
+    updateFileInfo();
     resetView(false);
     updateControls();
     renderPerspective();
@@ -619,7 +631,9 @@ function loadSettings() {
     const stored = JSON.parse(localStorage.getItem("orienta360-online-settings") || "{}");
     state.settings.orientedSuffix = stored.orientedSuffix || state.settings.orientedSuffix;
     state.settings.maskedSuffix = stored.maskedSuffix || state.settings.maskedSuffix;
-    state.settings.jpegQuality = clamp(Number(stored.jpegQuality || state.settings.jpegQuality), 0.85, 1);
+    if (Number(stored.settingsVersion || 0) >= 2 && Number.isFinite(Number(stored.jpegQuality))) {
+      state.settings.jpegQuality = clamp(Number(stored.jpegQuality), 0.85, 1);
+    }
   } catch {
     // Ignore malformed local settings.
   }
@@ -1253,6 +1267,18 @@ function updateNadirDialog() {
   $("#nadirLogoButton").classList.toggle("active", state.nadir.effect === "logo");
   $$(".logo-only").forEach((node) => node.classList.toggle("hidden", state.nadir.effect !== "logo"));
   $$(".mosaic-only").forEach((node) => node.classList.toggle("hidden", state.nadir.effect !== "mosaic"));
+  syncNadirOutputs();
+}
+
+function syncNadirOutputs() {
+  $("#nadirSizeValue").textContent = `${Math.round(state.nadir.size)}°`;
+  $("#mosaicScaleValue").textContent = `x${state.nadir.mosaicScale.toFixed(1)}`;
+  $("#logoOpacityValue").textContent = `${Math.round(state.nadir.logoOpacity * 100)}%`;
+  $("#logoFeatherValue").textContent = `${Math.round(state.nadir.logoFeather * 100)}%`;
+  $("#logoOvalValue").textContent = `${Math.round(state.nadir.logoOval)}`;
+  $("#logoRotationValue").textContent = `${Math.round(state.nadir.logoRotation)}°`;
+  $("#logoOffsetXValue").textContent = `${Math.round(state.nadir.logoOffsetX * 100)}%`;
+  $("#logoOffsetYValue").textContent = `${Math.round(state.nadir.logoOffsetY * 100)}%`;
 }
 
 function resetNadirParams() {
@@ -1272,11 +1298,57 @@ function resetNadirParams() {
   $("#logoRotation").value = 0;
   $("#logoOffsetX").value = 0;
   $("#logoOffsetY").value = 0;
+  syncNadirOutputs();
   updateNadirMaskSize();
   renderPerspective();
 }
 
+function makeDialogDraggable(dialog, handleSelector) {
+  const handle = dialog?.querySelector(handleSelector);
+  if (!dialog || !handle) {
+    return;
+  }
+  let drag = null;
+  const stopDrag = () => {
+    drag = null;
+  };
+  handle.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) {
+      return;
+    }
+    const rect = dialog.getBoundingClientRect();
+    dialog.style.left = `${rect.left}px`;
+    dialog.style.top = `${rect.top}px`;
+    dialog.style.right = "auto";
+    dialog.style.margin = "0";
+    drag = {
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    };
+    handle.setPointerCapture?.(event.pointerId);
+  });
+  handle.addEventListener("pointermove", (event) => {
+    if (!drag) {
+      return;
+    }
+    const maxLeft = Math.max(8, window.innerWidth - dialog.offsetWidth - 8);
+    const maxTop = Math.max(8, window.innerHeight - dialog.offsetHeight - 8);
+    dialog.style.left = `${clamp(event.clientX - drag.offsetX, 8, maxLeft)}px`;
+    dialog.style.top = `${clamp(event.clientY - drag.offsetY, 8, maxTop)}px`;
+  });
+  handle.addEventListener("pointerup", stopDrag);
+  handle.addEventListener("pointercancel", stopDrag);
+}
+
+function openPrivacyDialog() {
+  if (!refs.privacyDialog.open) {
+    refs.privacyDialog.showModal();
+  }
+  refs.privacyDialog.focus();
+}
+
 function bindEvents() {
+  makeDialogDraggable(refs.privacyDialog, ".dialog-drag-handle");
   $("#openPhotoButton").addEventListener("click", openSinglePhotoSelection);
   $("#openVideoButton").addEventListener("click", () => {
     alert("La sezione video online è in preparazione. Per ora i video restano nella versione locale sperimentale.");
@@ -1354,7 +1426,7 @@ function bindEvents() {
   $$(".privacy-button[data-tool]").forEach((button) => {
     button.addEventListener("click", () => setActiveTool(button.dataset.tool));
   });
-  $("#privacyTuneButton").addEventListener("click", () => refs.privacyDialog.showModal());
+  $("#privacyTuneButton").addEventListener("click", openPrivacyDialog);
   $("#privacyHelpButton").addEventListener("click", () => refs.privacyHelpDialog.showModal());
   $("#helpButton").addEventListener("click", () => refs.helpDialog.showModal());
   $("#settingsButton").addEventListener("click", () => openSettings());
@@ -1363,8 +1435,7 @@ function bindEvents() {
     if (!state.lastSavedUrl) {
       return;
     }
-    alert("Il browser non può avviare direttamente FSPViewer. Apro il risultato in una nuova scheda; per FSPViewer usa il JPG salvato da Esplora risorse o dalla barra download.");
-    window.open(state.lastSavedUrl, "_blank", "noopener");
+    alert("Il browser non può avviare direttamente FSPViewer. Questa apertura è disponibile nella versione locale; online apri il JPG salvato da Esplora risorse o dalla barra download.");
   });
   $$(".settings-tab").forEach((button) => {
     button.addEventListener("click", () => selectSettingsTab(button.dataset.settingsTab));
@@ -1380,7 +1451,8 @@ function bindEvents() {
   $("#resetSettingsButton").addEventListener("click", () => {
     state.settings.orientedSuffix = "_ORIENTATA";
     state.settings.maskedSuffix = "_MASCHERATO";
-    state.settings.jpegQuality = 0.98;
+    state.settings.jpegQuality = 1;
+    state.settings.settingsVersion = 2;
     syncSettingsDialog();
     saveSettings();
   });
@@ -1428,36 +1500,52 @@ function bindEvents() {
 
   $("#nadirSize").addEventListener("input", (event) => {
     state.nadir.size = Number(event.target.value);
+    syncNadirOutputs();
     ensureNadirMask();
     renderPerspective();
   });
   $("#mosaicScale").addEventListener("input", (event) => {
     state.nadir.mosaicScale = Number(event.target.value);
+    syncNadirOutputs();
     renderPerspective();
   });
   $("#logoOpacity").addEventListener("input", (event) => {
     state.nadir.logoOpacity = Number(event.target.value) / 100;
+    syncNadirOutputs();
     renderPerspective();
   });
   $("#logoFeather").addEventListener("input", (event) => {
     state.nadir.logoFeather = Number(event.target.value) / 100;
+    syncNadirOutputs();
     renderPerspective();
   });
   $("#logoOval").addEventListener("input", (event) => {
     state.nadir.logoOval = Number(event.target.value);
+    syncNadirOutputs();
     renderPerspective();
   });
   $("#logoRotation").addEventListener("input", (event) => {
     state.nadir.logoRotation = Number(event.target.value);
+    syncNadirOutputs();
     renderPerspective();
   });
   $("#logoOffsetX").addEventListener("input", (event) => {
     state.nadir.logoOffsetX = Number(event.target.value) / 100;
+    syncNadirOutputs();
     renderPerspective();
   });
   $("#logoOffsetY").addEventListener("input", (event) => {
     state.nadir.logoOffsetY = Number(event.target.value) / 100;
+    syncNadirOutputs();
     renderPerspective();
+  });
+  $$("[data-logo-rotation]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.nadir.logoRotation = Number(button.dataset.logoRotation);
+      $("#logoRotation").value = state.nadir.logoRotation;
+      syncNadirOutputs();
+      renderPerspective();
+    });
   });
   $("#resetNadirButton").addEventListener("click", resetNadirParams);
   window.addEventListener("resize", () => renderPerspective());
