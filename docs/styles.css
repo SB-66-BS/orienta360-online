@@ -104,7 +104,7 @@ button span {
 
 .top-grid {
   display: grid;
-  grid-template-columns: minmax(590px, 1.22fr) minmax(370px, 0.92fr) minmax(310px, 0.74fr);
+  grid-template-columns: minmax(740px, 1.24fr) minmax(340px, 0.72fr) minmax(300px, 0.56fr);
   gap: 12px;
   min-height: 224px;
   margin-bottom: 10px;
@@ -190,8 +190,8 @@ button span {
 
 .select-layout {
   display: grid;
-  grid-template-columns: 1.05fr 1.08fr 0.68fr 0.68fr;
-  column-gap: 14px;
+  grid-template-columns: 204px 204px 122px 122px;
+  column-gap: 16px;
   height: 100%;
   align-items: start;
 }
@@ -212,22 +212,28 @@ button span {
 }
 
 .single-column {
-  padding-right: 14px;
+  padding-right: 20px;
   border-right: 1px solid #c8d8f0;
 }
 
 .folder-controls {
-  padding-top: 35px;
+  padding-top: 34px;
 }
 
 .select-layout .action-button,
 .folder-controls .action-button {
   width: 100%;
   min-width: 0;
+  min-height: 48px;
 }
 
 .folder-column .check-row {
   min-height: 34px;
+  white-space: nowrap;
+}
+
+.folder-column .check-row span {
+  white-space: nowrap;
 }
 
 .action-button,
@@ -782,6 +788,10 @@ dialog::backdrop {
   font-size: 17px;
 }
 
+.floating-dialog h2 {
+  padding-right: 42px;
+}
+
 .dialog-drag-handle {
   display: flex;
   align-items: center;
@@ -1105,12 +1115,9 @@ dialog::backdrop {
   display: none !important;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1460px) {
   .app-shell { padding-inline: 14px; }
-  .top-grid {
-    grid-template-columns: minmax(570px, 1.2fr) minmax(350px, 0.88fr) minmax(292px, 0.72fr);
-    gap: 10px;
-  }
+  .top-grid { grid-template-columns: 1fr; }
   .card { padding-inline: 16px; }
   .select-layout { column-gap: 10px; }
   .action-button { font-size: 11px; }
