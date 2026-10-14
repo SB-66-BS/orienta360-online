@@ -95,6 +95,12 @@
       </article>
     </section>
 
+    <section class="status-row">
+      <span id="fileInfo">Nessuna foto caricata</span>
+      <span id="viewInfo">Yaw 0.00° · Pitch 0.00° · Roll 0.00° · FOV 80.00°</span>
+      <strong id="fixedText">Vista non fissata</strong>
+    </section>
+
     <section class="preview-panel">
       <div class="preview-header">
         <img src="assets/icons/photo-outline.svg" alt="">
@@ -125,32 +131,27 @@
       </div>
     </section>
 
-    <section class="status-row">
-      <span id="fileInfo">Nessuna foto caricata</span>
-      <span id="viewInfo">Yaw 0.00° · Pitch 0.00° · Roll 0.00° · FOV 80.00°</span>
-      <strong id="fixedText">Vista non fissata</strong>
-    </section>
-
-    <section class="viewer-row">
-      <button id="setViewerButton" class="action-button blue outline" type="button">Imposta FSPViewer</button>
-      <button id="openViewerButton" class="action-button blue outline" type="button" disabled>Apri in FSPViewer</button>
-    </section>
-
-    <section class="privacy-row">
-      <span>Privacy:</span>
-      <button id="privacyHelpButton" class="small-icon-button" type="button" title="Istruzioni privacy"><img src="assets/icons/help.svg" alt=""></button>
-      <button class="privacy-button" data-tool="faces" type="button">Maschera volti</button>
-      <button class="privacy-button" data-tool="plates" type="button">Maschera targhe</button>
-      <button class="privacy-button" data-tool="photographer" type="button">Maschera fotografo</button>
-      <button class="privacy-button" data-tool="nadir" type="button">Maschera Nadir</button>
-      <button id="privacyTuneButton" class="privacy-button outline" type="button">REGOLA</button>
-      <button id="resetPrivacyButton" class="privacy-button outline" type="button" disabled>RESET</button>
-      <button id="savePrivacyButton" class="privacy-button filled" type="button" disabled>SALVA PRIVACY</button>
-      <div id="privacyProgress" class="privacy-progress hidden" aria-live="polite">
-        <strong>Salvataggio privacy in corso</strong>
-        <div class="privacy-progress-track"><div id="privacyProgressBar" class="privacy-progress-bar"></div></div>
+    <section class="bottom-toolbar">
+      <div class="viewer-row">
+        <button id="setViewerButton" class="action-button blue outline" type="button">Imposta FSPViewer</button>
+        <button id="openViewerButton" class="action-button blue outline" type="button" disabled>Apri in FSPViewer</button>
       </div>
-      <span id="privacyStatus">Verifica foto corrente.</span>
+      <div class="privacy-row">
+        <span>Privacy:</span>
+        <button id="privacyHelpButton" class="small-icon-button" type="button" title="Istruzioni privacy"><img src="assets/icons/help.svg" alt=""></button>
+        <button class="privacy-button" data-tool="faces" type="button">Maschera volti</button>
+        <button class="privacy-button" data-tool="plates" type="button">Maschera targhe</button>
+        <button class="privacy-button" data-tool="photographer" type="button">Maschera fotografo</button>
+        <button class="privacy-button" data-tool="nadir" type="button">Maschera Nadir</button>
+        <button id="privacyTuneButton" class="privacy-button outline" type="button">REGOLA</button>
+        <button id="resetPrivacyButton" class="privacy-button outline" type="button" disabled>RESET</button>
+        <button id="savePrivacyButton" class="privacy-button filled" type="button" disabled>SALVA PRIVACY</button>
+        <div id="privacyProgress" class="privacy-progress hidden" aria-live="polite">
+          <strong>Salvataggio privacy in corso</strong>
+          <div class="privacy-progress-track"><div id="privacyProgressBar" class="privacy-progress-bar"></div></div>
+        </div>
+        <span id="privacyStatus">Verifica foto corrente.</span>
+      </div>
     </section>
   </main>
 
